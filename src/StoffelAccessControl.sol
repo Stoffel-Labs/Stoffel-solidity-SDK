@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules
 import "./interfaces/IStoffelAccessControl.sol";
 contract StoffelAccessControl is AccessControl, AccessControlDefaultAdminRules, AccessControlEnumerable, IStoffelAccessControl {
     bytes32 public constant PARTY_ROLE = keccak256("PARTY_ROLE");
-
+    bytes32 public constant CLIENT_ROLE = keccak256("CLIENT_ROLE");
     
     uint256 n_parties;
     uint256 threshold;
@@ -21,7 +21,9 @@ contract StoffelAccessControl is AccessControl, AccessControlDefaultAdminRules, 
     }
 
     function _grantRole(bytes32 role, address account) internal virtual override(AccessControl, AccessControlDefaultAdminRules, AccessControlEnumerable) returns (bool) {
-        require(getRoleMemberCount(role) <= n_parties, "Too many MPC parties");
+        if (role == PARTY_ROLE) {
+            require(getRoleMemberCount(role) <= n_parties, "Too many MPC parties");
+        }
         return super._grantRole(role, account);
 
     }
@@ -31,7 +33,9 @@ contract StoffelAccessControl is AccessControl, AccessControlDefaultAdminRules, 
     }
 
     function _revokeRole(bytes32 role, address account) internal virtual override(AccessControl, AccessControlDefaultAdminRules, AccessControlEnumerable) returns (bool) {
-        require(getRoleMemberCount(role)  >= threshold, "Not enough MPC parties");
+        if (role == PARTY_ROLE) {
+            require(getRoleMemberCount(role)  >= threshold, "Not enough MPC parties");
+        }
         return super._revokeRole(role, account);
     }
 
