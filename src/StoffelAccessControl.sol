@@ -5,6 +5,7 @@ import "./interfaces/IStoffelAccessControl.sol";
 
 contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffelAccessControl {
     bytes32 public constant PARTY_ROLE = keccak256("PARTY_ROLE");
+    bytes32 public constant DESIGNATED_PARTY_ROLE = keccak256("DESIGNATED_PARTY_ROLE");
     
     uint256 n_parties;
     uint256 threshold;
@@ -18,6 +19,15 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
             this.isParty(msg.sender),
             "Only a Stoffel party can call this function."
         );
+    }
+
+    modifier onlyDesignatedParty() {
+        _onlyDesignatedParty();
+        _;
+    }
+
+    function _onlyDesignatedParty() {
+        require(this.isDesignatedParty(msg.sender), "Only the designated Stofel party can call this function");
     }
 
     constructor(uint256 n, uint256 t) {
@@ -63,6 +73,18 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     function isParty(address account) public view  returns (bool) {
         address[] memory parties = getRoleMembers(PARTY_ROLE);
         uint n = getRoleMemberCount(PARTY_ROLE);
+        for (uint i=0; i <= n; i++) {
+            if (parties[i] == account) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function isDesignatedParty(address account) public view returns (bool) {
+        require(isParty(msg.sender), "This account is not an existing MPC Party");
+        address[] memory parties = getRoleMembers(DESIGNATED_PARTY_ROLE);
+        uint n = getRoleMemberCount(DESIGNATED_PARTY_ROLE);
         for (uint i=0; i <= n; i++) {
             if (parties[i] == account) {
                 return true;
