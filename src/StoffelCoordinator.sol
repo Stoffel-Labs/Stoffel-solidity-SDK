@@ -12,6 +12,7 @@ contract StoffelCoordinator is StoffelAccessControl, StoffelInputManager {
         CollectingClientInputRound,
         ClientInputsCollectionEndRound
         MPCTaskExecutionRound,
+        MPCTaskExecutionEndRound,
         ClientOutputCollectionRound
     }
 
@@ -29,15 +30,32 @@ contract StoffelCoordinator is StoffelAccessControl, StoffelInputManager {
         round = Rounds(uint(round) + 1);
     }
 
+    function goToRound(Round _round) internal {
+        round = _round;
+    }
+
     modifier timedRoundTransition(Rounds transitionRound, uint whenToTransition) {
         if (round == transitionRound && (block.timestamp >= creationTime + whenToTransition)) {
             nextRound();
         }
+        _;
 
     }
 
-    function initCoordinator() {}
+    modifier timedRoundTransitionGoto(Rounds transitionRound, Rounds gotoRound, uint whenToTransition) {
+        if (round == transitionRound && (block.timestamp >= creationTime + whenToTransition)) {
+            goToRound(gotoRound);
+        }
+        _;
+    }
 
+    function initCoordinator();
+
+    function initiateMPCComputation();
+
+    function publishPublicOutput();
+
+    
     
 
 }
