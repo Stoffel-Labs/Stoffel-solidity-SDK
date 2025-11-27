@@ -27,9 +27,6 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
         mapping(address => mapping (address => bool)) sharesReceived;
     }
 
-    mapping (address => Inputs) clientInputs;
-
-
     event CoordinatorInitialized(address coordinator, uint timeofInitialization, address designatedParty);
     event PreprocessingRoundExecuted(address designatedParty, uint timeOfExecution);
     event ClientInputMaskReversationEvent(address executor, uint timeOfExecution);
@@ -42,30 +39,52 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     Round round;
 
     modifier atRound(Round _round) {
-        require(_round == round);
+        _atRound(_round);
         _;
     }
 
-    function nextRound() internal {
+    modifier nextRound() {
+        _nextRound();
+        _;
+    }
+
+    modifier goToRound(Round _round) {
+        _goToRound(_round);
+        _;
+    }
+
+    function _atRound(Round _round) internal {
+        require(round == _round);
+    }
+
+    function _nextRound() internal {
         round = Round(uint(round) + 1);
     }
 
-    function goToRound(Round _round) internal {
+    function _goToRound(Round _round) internal {
         round = _round;
     }
 
-    modifier timedRoundTransition(Round transitionRound, uint whenToTransition) {
+    function _timedRoundTransition(Round transitionRound, uint whenToTransition) internal {
         if (round == transitionRound && (block.timestamp >= creationTime + whenToTransition)) {
-            nextRound();
+            _nextRound();
         }
+    }
+
+    function _timedRoundTransitionGoTo(Round transitionRound, Round gotoRound, uint whenToTransition) internal {
+        if (round == transitionRound && block.timestamp >= whenToTransition) {
+            _goToRound(gotoRound);
+        }
+    }
+
+    modifier timedRoundTransition(Round transitionRound, uint whenToTransition) {
+        _timedRoundTransition(transitionRound, whenToTransition);
         _;
 
     }
 
     modifier timedRoundTransitionGoto(Round transitionRound, Round gotoRound, uint whenToTransition) {
-        if (round == transitionRound && (block.timestamp >= creationTime + whenToTransition)) {
-            goToRound(gotoRound);
-        }
+        _timedRoundTransitionGoTo(transitionRound, gotoRound, whenToTransition);
         _;
     }
 
@@ -91,8 +110,10 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
      * Depending on the trust model of the contract that instantiates this abstract contract
      * the designated party can set the input mask indices or each party can contribute to setting
      * the input mask indices.
+     * 
+     * Should be used in conjuction with the atRound modififer
      */
-    function startPreprocessing() atRound(Round.PreprocessingRound) virtual external;
+    function startPreprocessing() virtual external;
 
     /**
      * Once the indices have been set, clients should now be able to reserve an index
@@ -103,8 +124,9 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
 
     /**
      * Once enough inputs have been collected according to the application's logic, the MPC computation should be initiated
+     * Should be used in conjunction with the atRound modifier
      */
-    function initiateMPCComputation() atRound(Round.ClientInputsCollectionEndRound) virtual external;
+    function initiateMPCComputation() virtual external;
 
     /**
      * Once the computation has been completed by the MPC nodes off-chain

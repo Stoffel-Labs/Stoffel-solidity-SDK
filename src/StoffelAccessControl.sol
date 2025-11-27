@@ -30,7 +30,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         _;
     }
 
-    function _onlyDesignatedParty() {
+    function _onlyDesignatedParty() internal {
         require(this.isDesignatedParty(msg.sender), "Only the designated Stofel party can call this function");
     }
 
