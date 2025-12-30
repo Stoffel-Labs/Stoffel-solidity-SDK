@@ -9,11 +9,15 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     
     uint256 n_parties;
     uint256 threshold;
+    mapping(address => bool) public is_party;
+
+    event InitializeStoffelAccessControl(uint256 n, uint256 t, address initializer);
     
     modifier onlyParty() {
         _onlyParty();
         _;
     }
+
     function _onlyParty() internal {
         require(
             this.isParty(msg.sender),
@@ -26,13 +30,15 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         _;
     }
 
-    function _onlyDesignatedParty() {
+    function _onlyDesignatedParty() internal {
         require(this.isDesignatedParty(msg.sender), "Only the designated Stofel party can call this function");
     }
 
     constructor(uint256 n, uint256 t) {
         n_parties = n;
         threshold = t;
+
+        emit InitializeStoffelAccessControl(n, t, msg.sender);
     }
 
     function supportsInterface(bytes4 interfaceId) public view  override(AccessControl, AccessControlEnumerable, IStoffelAccessControl) returns (bool) {
@@ -42,6 +48,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     function _grantRole(bytes32 role, address account) internal  override(AccessControl, AccessControlEnumerable) returns (bool) {
         if (role == PARTY_ROLE) {
             require(getRoleMemberCount(role) <= n_parties, "Too many MPC parties");
+            is_party[account] = true;
         }
         return super._grantRole(role, account);
 
@@ -71,14 +78,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     }
 
     function isParty(address account) public view  returns (bool) {
-        address[] memory parties = getRoleMembers(PARTY_ROLE);
-        uint n = getRoleMemberCount(PARTY_ROLE);
-        for (uint i=0; i <= n; i++) {
-            if (parties[i] == account) {
-                return true;
-            }
-        }
-        return false;
+        return is_party[account];
     }
 
     function isDesignatedParty(address account) public view returns (bool) {
@@ -92,8 +92,6 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         }
         return false;
     }
-
-    
 
 
 }
