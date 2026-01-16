@@ -1,7 +1,14 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
+
 import "./IStoffelAccessControl.sol";
 import "./IStoffelInputManager.sol";
 
-interface IStoffelCoordinator is IStoffelAccessControl, IStoffelInputManager{
-
-}
+/// @title IStoffelCoordinator
+/// @author Stoffel Labs
+/// @notice Combined interface for the MPC coordinator contract
+/// @dev Inherits from IStoffelAccessControl for party management and
+///      IStoffelInputManager for client input handling. Implementations
+///      should also define the four lifecycle methods: startPreprocessing,
+///      gatherInputs, initiateMPCComputation, and publishOutputs.
+interface IStoffelCoordinator is IStoffelAccessControl, IStoffelInputManager {}
