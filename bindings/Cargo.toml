@@ -1,0 +1,17 @@
+[package]
+name = "stoffel-solidity-bindings"
+version = "0.1.0"
+edition = "2021"
+description = "Type-safe Rust bindings for Stoffel Solidity contracts"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/stoffel-labs/Stoffel-solidity-SDK"
+readme = "README.md"
+
+[dependencies]
+# The generated bindings require alloy with sol-types and contract features
+alloy = { version = "1.0", features = ["sol-types", "contract", "serde"] }
+serde = { version = "1.0", features = ["derive"] }
+
+[features]
+default = []
+providers = ["alloy/providers"]
