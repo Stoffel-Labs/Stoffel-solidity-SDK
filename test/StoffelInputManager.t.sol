@@ -8,11 +8,7 @@ import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptogra
 
 /// @title StoffelInputManagerTest
 /// @notice Tests for StoffelInputManager functionality
-/// @dev CRITICAL BUG DISCOVERED: reserveInputMask() has backwards require condition.
-///      The code is `require(reservedInputIndices[indexToReserve] != address(0), ...)`
-///      but should be `require(reservedInputIndices[indexToReserve] == address(0), ...)`.
-///      This means NO indices can ever be reserved - the function always reverts.
-///      Tests document this bug and use workarounds where possible.
+/// @dev Tests input mask reservation, client authentication, and masked input submission
 contract StoffelInputManagerTest is Test {
     MockCoordinator public coordinator;
 
@@ -75,7 +71,8 @@ contract StoffelInputManagerTest is Test {
         // Create fresh coordinator for this test
         address[] memory nodes = new address[](1);
         nodes[0] = party1;
-        MockCoordinator freshCoordinator = new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, nodes);
+        MockCoordinator freshCoordinator =
+            new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, nodes);
 
         vm.prank(designatedParty);
         vm.expectEmit(true, true, true, true);
@@ -88,7 +85,8 @@ contract StoffelInputManagerTest is Test {
         // Create a fresh coordinator and try to initialize twice
         address[] memory nodes = new address[](1);
         nodes[0] = party1;
-        MockCoordinator freshCoordinator = new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, nodes);
+        MockCoordinator freshCoordinator =
+            new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, nodes);
 
         vm.startPrank(designatedParty);
         freshCoordinator.startPreprocessingWithSizeTest(5);
@@ -103,7 +101,8 @@ contract StoffelInputManagerTest is Test {
     function test_onlyDesignatedPartyCanInitializeBuffer() public {
         address[] memory nodes = new address[](1);
         nodes[0] = party1;
-        MockCoordinator freshCoordinator = new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, nodes);
+        MockCoordinator freshCoordinator =
+            new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, nodes);
 
         // Due to isDesignatedParty bug, this panics with array out-of-bounds instead
         // of giving the expected "Only the designated Stofel party can call this function" error
@@ -113,56 +112,96 @@ contract StoffelInputManagerTest is Test {
     }
 
     // =========================================================================
-    // Bug Documentation: reserveInputMask backwards require condition
+    // Index Reservation Tests
     // =========================================================================
 
-    function test_bug_reserveInputMaskAlwaysReverts() public {
-        // BUG: StoffelInputManager.reserveInputMask() has backwards require:
-        // `require(reservedInputIndices[indexToReserve] != address(0), ...)`
-        // should be:
-        // `require(reservedInputIndices[indexToReserve] == address(0), ...)`
-        //
-        // This means ANY attempt to reserve ANY index will ALWAYS revert
-        // because initially all indices map to address(0).
+    function test_reserveInputMask() public {
+        // Client can reserve an available input mask index
         vm.prank(client1);
-        vm.expectRevert("This index has already been reserved");
+        vm.expectEmit(true, true, true, true);
+        emit ReservedInputEvent(client1, 0);
         coordinator.reserveInputMask(0);
+
+        // Verify index count decreased
+        assertEq(coordinator.currentlyAvailableInputMasks(), BUFFER_SIZE - 1);
     }
 
-    // =========================================================================
-    // Index Reservation Tests (all document the backwards require bug)
-    // =========================================================================
-
-    function test_reserveInputMask_revertsWithBug() public {
-        // Due to backwards require, this always reverts
+    function test_reserveMultipleIndices() public {
+        // Client1 reserves index 0
         vm.prank(client1);
-        vm.expectRevert("This index has already been reserved");
         coordinator.reserveInputMask(0);
+
+        // Client2 reserves index 1
+        vm.prank(client2);
+        coordinator.reserveInputMask(1);
+
+        // Verify both reservations succeeded
+        assertEq(coordinator.currentlyAvailableInputMasks(), BUFFER_SIZE - 2);
     }
 
-    function test_reserveMultipleIndices_revertsWithBug() public {
+    function test_cannotReserveAlreadyReservedIndex() public {
+        // Client1 reserves index 0
         vm.prank(client1);
+        coordinator.reserveInputMask(0);
+
+        // Client2 tries to reserve the same index - should fail
+        vm.prank(client2);
         vm.expectRevert("This index has already been reserved");
         coordinator.reserveInputMask(0);
     }
 
     function test_currentlyAvailableInputMasks() public view {
-        // nIndicesLeft is not properly initialized in the contract
-        // This test documents the current behavior
+        // After buffer initialization, all indices should be available
         uint256 available = coordinator.currentlyAvailableInputMasks();
-        // Due to a bug in the contract, nIndicesLeft starts at 0 and is never set
-        assertEq(available, 0);
+        assertEq(available, BUFFER_SIZE);
     }
 
     // =========================================================================
-    // Input Submission Tests (cannot test properly due to reservation bug)
+    // Input Submission Tests
     // =========================================================================
 
-    function test_submitMaskedInput_cannotTestDueToReservationBug() public {
-        // Cannot test submitMaskedInput because reserveInputMask always reverts
+    function test_submitMaskedInput() public {
+        // Client reserves an index first
         vm.prank(client1);
-        vm.expectRevert("This index has already been reserved");
         coordinator.reserveInputMask(0);
+
+        // Client submits masked input using reserved index
+        uint256 maskedInput = 12345;
+        vm.prank(client1);
+        vm.expectEmit(true, true, true, true);
+        emit MaskedInputEvent(client1, maskedInput, 0);
+        coordinator.submitMaskedInput(maskedInput, 0);
+    }
+
+    function test_cannotSubmitWithoutReservation() public {
+        // Client tries to submit without reserving - should fail
+        vm.prank(client1);
+        vm.expectRevert("This client did not reserve the input mask at this index");
+        coordinator.submitMaskedInput(12345, 0);
+    }
+
+    function test_cannotSubmitWithOthersReservation() public {
+        // Client1 reserves index 0
+        vm.prank(client1);
+        coordinator.reserveInputMask(0);
+
+        // Client2 tries to submit using client1's reservation - should fail
+        vm.prank(client2);
+        vm.expectRevert("This client did not reserve the input mask at this index");
+        coordinator.submitMaskedInput(12345, 0);
+    }
+
+    function test_indexUnreservedAfterSubmission() public {
+        // Client reserves and submits
+        vm.startPrank(client1);
+        coordinator.reserveInputMask(0);
+        coordinator.submitMaskedInput(12345, 0);
+        vm.stopPrank();
+
+        // Index should be unreserved after submission, so client1 cannot submit again
+        vm.prank(client1);
+        vm.expectRevert("This client did not reserve the input mask at this index");
+        coordinator.submitMaskedInput(67890, 0);
     }
 
     // =========================================================================

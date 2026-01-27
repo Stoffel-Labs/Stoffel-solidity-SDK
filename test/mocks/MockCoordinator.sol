@@ -6,14 +6,7 @@ import {StoffelCoordinator} from "../../src/StoffelCoordinator.sol";
 /// @title MockCoordinator
 /// @notice Concrete implementation of StoffelCoordinator for testing
 /// @dev Implements all 4 abstract methods with minimal logic to enable testing.
-///
-/// KNOWN BUGS IN PARENT CONTRACT (StoffelAccessControl):
-/// 1. isDesignatedParty() has a loop bug (i <= n instead of i < n) causing array out-of-bounds
-/// 2. The is_party mapping is not cleared when PARTY_ROLE is revoked
-/// 3. _grantRole uses <= instead of < for party count check (allows n+1 parties)
-///
-/// Due to bug #1, the onlyDesignatedParty modifier will always panic when there are
-/// designated parties. Tests document this behavior and use alternative verification methods.
+///      Provides both standard lifecycle methods and *Test() helper variants.
 contract MockCoordinator is StoffelCoordinator {
     uint256 public inputBufferSize;
     uint256 public inputCount;
@@ -114,22 +107,19 @@ contract MockCoordinator is StoffelCoordinator {
     }
 
     // =========================================================================
-    // Testing Helpers (bypass buggy onlyDesignatedParty modifier)
+    // Testing Helpers (direct role check without external call)
     // =========================================================================
-    // These functions use a manual check instead of the buggy isDesignatedParty()
-    // to allow testing the coordinator's round progression logic.
+    // These functions use a direct hasRole check instead of the external
+    // isDesignatedParty() call, useful for testing internal buffer initialization.
 
     modifier onlyDesignatedPartyTest() {
         require(isParty(msg.sender), "This account is not an existing MPC Party");
-        require(
-            hasRole(DESIGNATED_PARTY_ROLE, msg.sender),
-            "Only the designated Stofel party can call this function"
-        );
+        require(hasRole(DESIGNATED_PARTY_ROLE, msg.sender), "Only the designated Stofel party can call this function");
         _;
     }
 
-    /// @notice Test helper: Start preprocessing (bypasses buggy modifier)
-    /// @dev Sets nTotalIndices directly since initialzeInputMaskBuffer uses buggy onlyDesignatedParty
+    /// @notice Test helper: Start preprocessing with direct buffer initialization
+    /// @dev Sets nTotalIndices directly without external call
     function startPreprocessingTest() external onlyDesignatedPartyTest atRound(Round.PreprocessingRound) {
         inputBufferSize = 10;
         _initializeBufferDirect(inputBufferSize);
@@ -137,8 +127,8 @@ contract MockCoordinator is StoffelCoordinator {
         _nextRound();
     }
 
-    /// @notice Test helper: Start preprocessing with size (bypasses buggy modifier)
-    /// @dev Sets nTotalIndices directly since initialzeInputMaskBuffer uses buggy onlyDesignatedParty
+    /// @notice Test helper: Start preprocessing with size and direct buffer initialization
+    /// @dev Sets nTotalIndices directly without external call
     function startPreprocessingWithSizeTest(uint256 bufferSize)
         external
         onlyDesignatedPartyTest
@@ -151,26 +141,27 @@ contract MockCoordinator is StoffelCoordinator {
     }
 
     /// @notice Internal helper to initialize buffer directly without external call
-    /// @dev Bypasses the buggy onlyDesignatedParty modifier on initialzeInputMaskBuffer
+    /// @dev Useful for testing without going through the external function
     ///      Uses IndexBufferEvent inherited from StoffelInputManager
     function _initializeBufferDirect(uint256 nIndicesToReserve) internal {
         require(nTotalIndices == 0, "The index buffer has already been set");
         nTotalIndices = nIndicesToReserve;
+        nIndicesLeft = nIndicesToReserve;
         emit IndexBufferEvent(nTotalIndices, msg.sender);
     }
 
-    /// @notice Test helper: Gather inputs (bypasses buggy modifier)
+    /// @notice Test helper: Gather inputs with direct role check
     function gatherInputsTest() external onlyDesignatedPartyTest atRound(Round.ClientInputMaskReservationRound) {
         emit InputGatheringStarted(msg.sender, block.timestamp);
         _nextRound();
     }
 
-    /// @notice Test helper: End input collection (bypasses buggy modifier)
+    /// @notice Test helper: End input collection with direct role check
     function endInputCollectionTest() external onlyDesignatedPartyTest atRound(Round.CollectingClientInputRound) {
         _nextRound();
     }
 
-    /// @notice Test helper: Initiate MPC computation (bypasses buggy modifier)
+    /// @notice Test helper: Initiate MPC computation with direct role check
     function initiateMPCComputationTest()
         external
         onlyDesignatedPartyTest
@@ -180,23 +171,23 @@ contract MockCoordinator is StoffelCoordinator {
         _nextRound();
     }
 
-    /// @notice Test helper: End MPC execution (bypasses buggy modifier)
+    /// @notice Test helper: End MPC execution with direct role check
     function endMPCExecutionTest() external onlyDesignatedPartyTest atRound(Round.MPCTaskExecutionRound) {
         _nextRound();
     }
 
-    /// @notice Test helper: Publish outputs (bypasses buggy modifier)
+    /// @notice Test helper: Publish outputs with direct role check
     function publishOutputsTest() external onlyDesignatedPartyTest atRound(Round.MPCTaskExecutionEndRound) {
         emit OutputsPublished(msg.sender, storedOutputs, block.timestamp);
         _nextRound();
     }
 
-    /// @notice Test helper: Set outputs (bypasses buggy modifier)
+    /// @notice Test helper: Set outputs with direct role check
     function setOutputsTest(bytes calldata outputs) external onlyDesignatedPartyTest {
         storedOutputs = outputs;
     }
 
-    /// @notice Test helper: Force next round (bypasses buggy modifier)
+    /// @notice Test helper: Force next round with direct role check
     function forceNextRoundTest() external onlyDesignatedPartyTest {
         _nextRound();
     }

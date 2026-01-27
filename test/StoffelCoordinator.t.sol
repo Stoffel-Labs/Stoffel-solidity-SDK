@@ -7,11 +7,7 @@ import {StoffelCoordinator} from "../src/StoffelCoordinator.sol";
 
 /// @title StoffelCoordinatorTest
 /// @notice Tests for StoffelCoordinator functionality
-/// @dev Note: The parent contract StoffelAccessControl.isDesignatedParty() has a bug
-///      where the loop uses `i <= n` instead of `i < n`, causing array out-of-bounds.
-///      Tests use MockCoordinator's *Test() functions which bypass this bug to test
-///      the coordinator's actual round progression logic.
-///      Tests for the buggy behavior document it explicitly.
+/// @dev Tests round state machine, lifecycle methods, and access control integration
 contract StoffelCoordinatorTest is Test {
     MockCoordinator public coordinator;
 
@@ -263,21 +259,18 @@ contract StoffelCoordinatorTest is Test {
     }
 
     // =========================================================================
-    // Bug Documentation: isDesignatedParty() array out-of-bounds
-    // =========================================================================
-
-    function test_bug_isDesignatedPartyPanicsWithArrayOutOfBounds() public {
-        // BUG: StoffelAccessControl.isDesignatedParty() uses `i <= n` instead of `i < n`
-        // in its loop, causing array out-of-bounds access when there are designated parties.
-        // This test documents that the original startPreprocessing() function will panic.
-        vm.prank(designatedParty);
-        vm.expectRevert(); // Expect panic: array out-of-bounds access (0x32)
-        coordinator.startPreprocessing();
-    }
-
-    // =========================================================================
     // Integration Tests
     // =========================================================================
+
+    function test_isDesignatedPartyWorksCorrectly() public {
+        // Verify isDesignatedParty() works without array out-of-bounds
+        vm.prank(designatedParty);
+        assertTrue(coordinator.isDesignatedParty(designatedParty));
+
+        // Non-designated party should return false
+        vm.prank(designatedParty);
+        assertFalse(coordinator.isDesignatedParty(party1));
+    }
 
     function test_fullLifecycleWorkflow() public {
         // Verify initial state
@@ -288,15 +281,22 @@ contract StoffelCoordinatorTest is Test {
         // 1. Start preprocessing
         coordinator.startPreprocessingWithSizeTest(10);
         assertEq(coordinator.inputBufferSize(), 10);
+        assertEq(coordinator.currentlyAvailableInputMasks(), 10);
 
         // 2. Gather inputs
         coordinator.gatherInputsTest();
 
         vm.stopPrank();
 
-        // NOTE: Cannot test client input reservation/submission due to bug in reserveInputMask
-        // (backwards require condition - see StoffelInputManagerTest for details)
-        // Skipping steps 3 and incrementInputCount
+        // 3. Client reserves index and submits input
+        address client = makeAddr("CLIENT");
+        vm.startPrank(client);
+        coordinator.reserveInputMask(0);
+        coordinator.submitMaskedInput(12345, 0);
+        vm.stopPrank();
+
+        // Increment input count to simulate received input
+        coordinator.incrementInputCount();
 
         // 4. End input collection and initiate computation
         vm.startPrank(designatedParty);
@@ -318,17 +318,23 @@ contract StoffelCoordinatorTest is Test {
     }
 
     function test_multiplePartiesCanBeDesignated() public {
-        // The contract allows multiple designated parties
-        address newDesignatedParty = makeAddr("NEW_DESIGNATED");
+        // Create a new coordinator with fewer initial parties to allow adding more
+        address newDesignated = makeAddr("NEW_DESIGNATED");
+        address[] memory fewNodes = new address[](1);
+        fewNodes[0] = party1;
 
-        // First make them a party
-        coordinator.grantRole(coordinator.PARTY_ROLE(), newDesignatedParty);
+        // n=5 parties max, constructor grants: designatedParty (1) + contract (2) + party1 (3) = 3 parties
+        MockCoordinator newCoordinator =
+            new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, fewNodes);
+
+        // First make newDesignated a party (4 parties total)
+        newCoordinator.grantRole(newCoordinator.PARTY_ROLE(), newDesignated);
 
         // Then grant designated party role
-        coordinator.grantRole(coordinator.DESIGNATED_PARTY_ROLE(), newDesignatedParty);
+        newCoordinator.grantRole(newCoordinator.DESIGNATED_PARTY_ROLE(), newDesignated);
 
-        assertTrue(coordinator.hasRole(coordinator.DESIGNATED_PARTY_ROLE(), newDesignatedParty));
-        assertTrue(coordinator.hasRole(coordinator.DESIGNATED_PARTY_ROLE(), designatedParty));
+        assertTrue(newCoordinator.hasRole(newCoordinator.DESIGNATED_PARTY_ROLE(), newDesignated));
+        assertTrue(newCoordinator.hasRole(newCoordinator.DESIGNATED_PARTY_ROLE(), designatedParty));
     }
 
     // =========================================================================
@@ -374,7 +380,6 @@ contract StoffelCoordinatorTest is Test {
 
         // currentlyAvailableInputMasks is inherited from InputManager
         uint256 available = coordinator.currentlyAvailableInputMasks();
-        // Note: Due to a bug, this returns 0 instead of 5
-        assertEq(available, 0);
+        assertEq(available, 5);
     }
 }

@@ -99,7 +99,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         returns (bool)
     {
         if (role == PARTY_ROLE) {
-            require(getRoleMemberCount(role) <= n_parties, "Too many MPC parties");
+            require(getRoleMemberCount(role) < n_parties, "Too many MPC parties");
             is_party[account] = true;
         }
         return super._grantRole(role, account);
@@ -127,7 +127,8 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         returns (bool)
     {
         if (role == PARTY_ROLE) {
-            require(getRoleMemberCount(role) >= threshold, "Not enough MPC parties");
+            require(getRoleMemberCount(role) > threshold, "Not enough MPC parties");
+            is_party[account] = false;
         }
         return super._revokeRole(role, account);
     }
@@ -174,7 +175,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         require(isParty(msg.sender), "This account is not an existing MPC Party");
         address[] memory parties = getRoleMembers(DESIGNATED_PARTY_ROLE);
         uint256 n = getRoleMemberCount(DESIGNATED_PARTY_ROLE);
-        for (uint256 i = 0; i <= n; i++) {
+        for (uint256 i = 0; i < n; i++) {
             if (parties[i] == account) {
                 return true;
             }

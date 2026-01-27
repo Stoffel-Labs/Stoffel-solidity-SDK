@@ -7,11 +7,7 @@ import {IStoffelAccessControl} from "../src/interfaces/IStoffelAccessControl.sol
 
 /// @title StoffelAccessControlTest
 /// @notice Tests for StoffelAccessControl functionality
-/// @dev Discovered bugs in contract:
-///      1. _grantRole uses `<=` instead of `<` for party count check (allows n+1 parties)
-///      2. _revokeRole checks count BEFORE revoke (allows going below threshold)
-///      3. is_party mapping is not cleared when PARTY_ROLE is revoked
-///      4. isDesignatedParty loop uses `i <= n` instead of `i < n` (array out-of-bounds)
+/// @dev Tests role management, threshold constraints, and party membership
 contract StoffelAccessControlTest is Test {
     StoffelAccessControl public accessControl;
 
@@ -84,9 +80,8 @@ contract StoffelAccessControlTest is Test {
         assertTrue(accessControl.hasRole(accessControl.DESIGNATED_PARTY_ROLE(), designatedParty));
     }
 
-    function test_bug_canExceedMaxPartiesDueToBuggyCheck() public {
-        // BUG: Contract uses <= check instead of <, so it allows n+1 parties
-        // Grant to max parties (n=5), then add a 6th
+    function test_cannotExceedMaxParties() public {
+        // Grant exactly n_parties (5 parties)
         bytes32 partyRole = accessControl.PARTY_ROLE();
 
         accessControl.grantRole(partyRole, party1);
@@ -95,16 +90,13 @@ contract StoffelAccessControlTest is Test {
         accessControl.grantRole(partyRole, party4);
         accessControl.grantRole(partyRole, party5);
 
-        // With 5 parties and n=5, the check (5 <= 5) passes
-        // So we can add a 6th party! This is a BUG in the contract
-        address party6 = makeAddr("PARTY6");
-        accessControl.grantRole(partyRole, party6);
-        assertTrue(accessControl.isParty(party6));
+        // Verify all 5 parties are granted
+        assertEq(accessControl.getRoleMemberCount(partyRole), 5);
 
-        // Now with 6 parties, adding 7th would fail (6 <= 5 is false)
-        address party7 = makeAddr("PARTY7");
+        // Attempting to add a 6th party should fail (5 < 5 is false)
+        address party6 = makeAddr("PARTY6");
         vm.expectRevert("Too many MPC parties");
-        accessControl.grantRole(partyRole, party7);
+        accessControl.grantRole(partyRole, party6);
     }
 
     function test_duplicateGrantNoOp() public {
@@ -127,31 +119,32 @@ contract StoffelAccessControlTest is Test {
         // Revoke one (should still have enough for threshold)
         accessControl.revokeRole(accessControl.PARTY_ROLE(), party1);
 
-        // Note: is_party mapping is NOT updated on revoke - this is a BUG
-        // The hasRole check works correctly though
+        // Verify both hasRole and isParty return false after revoke
         assertFalse(accessControl.hasRole(accessControl.PARTY_ROLE(), party1));
-        // But isParty still returns true because is_party mapping wasn't cleared
-        assertTrue(accessControl.isParty(party1)); // BUG: should be false
+        assertFalse(accessControl.isParty(party1));
+
+        // Verify other parties are unaffected
+        assertTrue(accessControl.isParty(party2));
+        assertTrue(accessControl.isParty(party3));
     }
 
     function test_cannotRevokeBelowThreshold() public {
-        // Setup: Grant exactly threshold + 1 parties
-        accessControl.grantRole(accessControl.PARTY_ROLE(), party1);
-        accessControl.grantRole(accessControl.PARTY_ROLE(), party2);
+        // Setup: Grant threshold + 1 parties (2 parties with t=1)
+        bytes32 partyRole = accessControl.PARTY_ROLE();
+        accessControl.grantRole(partyRole, party1);
+        accessControl.grantRole(partyRole, party2);
 
-        // With 2 parties and t=1, check is: 2 >= 1 (true)
-        // Revoke brings count to 1, which still >= 1
-        accessControl.revokeRole(accessControl.PARTY_ROLE(), party1);
+        // With 2 parties and t=1, revoking one should succeed (2 > 1)
+        accessControl.revokeRole(partyRole, party1);
+        assertEq(accessControl.getRoleMemberCount(partyRole), 1);
 
-        // Now with 1 party, try to revoke the last one
-        // Check is: 1 >= 1 (true), so the revoke proceeds!
-        // After revoke, count is 0, but check passed before revoke
-        // This is a BUG - should check AFTER revoke, not before
-        accessControl.revokeRole(accessControl.PARTY_ROLE(), party2);
+        // Now with 1 party (equal to threshold), revoking should fail (1 > 1 is false)
+        vm.expectRevert("Not enough MPC parties");
+        accessControl.revokeRole(partyRole, party2);
 
-        // With threshold check, we should not be able to revoke below threshold
-        // But due to the bug, we can empty all parties
-        assertEq(accessControl.getRoleMemberCount(accessControl.PARTY_ROLE()), 0);
+        // Verify party2 still has the role
+        assertTrue(accessControl.isParty(party2));
+        assertEq(accessControl.getRoleMemberCount(partyRole), 1);
     }
 
     // =========================================================================
@@ -183,14 +176,9 @@ contract StoffelAccessControlTest is Test {
     function test_isDesignatedParty_returnsFalse_whenNoDesignatedParties() public {
         accessControl.grantRole(accessControl.PARTY_ROLE(), party1);
 
-        // When there are no designated parties, the loop returns false safely
-        // But there's a bug: if getRoleMemberCount returns 0, loop uses i <= 0
-        // which means i=0 is checked, causing array out of bounds on getRoleMembers
-        // This test documents the expected behavior after the bug is fixed
+        // When there are no designated parties, the function should return false
         vm.prank(party1);
-        // Due to bug, this will revert with array out of bounds
-        vm.expectRevert();
-        accessControl.isDesignatedParty(party1);
+        assertFalse(accessControl.isDesignatedParty(party1));
     }
 
     function test_isDesignatedParty_requiresCallerToBeParty() public {
