@@ -60,6 +60,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     function initialzeInputMaskBuffer(uint256 nIndicesToReserve) external onlyDesignatedParty {
         require(nTotalIndices == 0, "The index buffer has already been set");
         nTotalIndices = nIndicesToReserve;
+        nIndicesLeft = nIndicesToReserve;
 
         emit IndexBufferEvent(nTotalIndices, msg.sender);
     }
@@ -69,7 +70,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @dev Clients must reserve an index before they can request the corresponding
     ///      input mask from MPC nodes and submit their masked input.
     function reserveInputMask(uint256 indexToReserve) external override {
-        require(reservedInputIndices[indexToReserve] != address(0), "This index has already been reserved");
+        require(reservedInputIndices[indexToReserve] == address(0), "This index has already been reserved");
         require(nIndicesLeft > 0, "No more indices to reserve");
 
         reservedInputIndices[indexToReserve] = msg.sender;
