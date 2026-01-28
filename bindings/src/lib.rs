@@ -15,6 +15,7 @@ pub mod i_stoffel_input_manager;
 pub mod stoffel_access_control;
 pub mod stoffel_coordinator;
 pub mod stoffel_input_manager;
+pub mod fake_coordinator;
 
 // Re-export main contract bindings
 pub use stoffel_access_control::StoffelAccessControl;
