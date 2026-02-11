@@ -10,7 +10,7 @@ interface IStoffelInputManager {
     /// @notice Reserves input mask indices for the calling client
     /// @param nIndices The number of indices to reserve
     /// @dev Must be called before obtaining the mask from MPC nodes
-    function obtainInputMasks(uint256 nIndices) external virtual;
+    function obtainInputMasks(uint256 nIndices) external virtual returns (uint256[] memory);
 
     /// @notice Returns the number of input mask indices still available
     /// @return Number of unreserved indices

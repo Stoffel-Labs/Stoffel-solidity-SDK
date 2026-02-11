@@ -83,7 +83,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @param nIndices The number of indices to reserve
     /// @dev Clients must reserve an index before they can request the corresponding
     ///      input mask from MPC nodes and submit their masked input.
-    function obtainInputMasks(uint256 nIndices) external override {
+    function obtainInputMasks(uint256 nIndices) external override returns (uint256[] memory) {
 	uint256 nIndicesLeft = nTotalIndices - nNextIndex; 
 
         if (nIndices > nIndicesLeft) {
@@ -91,11 +91,18 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 	}
 
 	uint256 nFinalIndex = nNextIndex + nIndices - 1;
+        uint256[] memory indices = new uint256[](nIndices);
+	uint256 firstIndex = nNextIndex;
 
 	for ( ; nNextIndex <= nFinalIndex; nNextIndex++) {
             reservedInputIndices[nNextIndex] = msg.sender;
+            indices[nNextIndex - firstIndex] = nNextIndex;
             emit ReservedInputEvent(msg.sender, nNextIndex);
 	}
+
+	nIndicesLeft -= nIndices;
+
+	return indices;
     }
 
     /// @notice Returns the number of input mask indices still available

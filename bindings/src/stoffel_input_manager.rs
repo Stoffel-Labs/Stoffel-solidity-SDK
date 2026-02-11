@@ -34,7 +34,7 @@ interface StoffelInputManager {
     function hasRole(bytes32 role, address account) external view returns (bool);
     function isDesignatedParty(address account) external view returns (bool);
     function isParty(address account) external view returns (bool);
-    function obtainInputMasks(uint256 nIndices) external;
+    function obtainInputMasks(uint256 nIndices) external returns (uint256[] memory);
     function renounceRole(bytes32 role, address account) external;
     function resetAccessControl(uint256 t, address[] memory initialMPCNodes) external;
     function resetInputManager(uint256 nIndicesToReserve) external;
@@ -299,7 +299,13 @@ interface StoffelInputManager {
         "internalType": "uint256"
       }
     ],
-    "outputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
     "stateMutability": "nonpayable"
   },
   {
@@ -4411,7 +4417,7 @@ function isParty(address account) external view returns (bool);
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `obtainInputMasks(uint256)` and selector `0xebae35e7`.
 ```solidity
-function obtainInputMasks(uint256 nIndices) external;
+function obtainInputMasks(uint256 nIndices) external returns (uint256[] memory);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -4419,10 +4425,17 @@ function obtainInputMasks(uint256 nIndices) external;
         #[allow(missing_docs)]
         pub nIndices: alloy::sol_types::private::primitives::aliases::U256,
     }
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`obtainInputMasks(uint256)`](obtainInputMasksCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct obtainInputMasksReturn {}
+    pub struct obtainInputMasksReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::Vec<
+            alloy::sol_types::private::primitives::aliases::U256,
+        >,
+    }
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -4470,9 +4483,15 @@ function obtainInputMasks(uint256 nIndices) external;
         {
             #[doc(hidden)]
             #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+            );
             #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::Vec<
+                    alloy::sol_types::private::primitives::aliases::U256,
+                >,
+            );
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
             fn _type_assertion(
@@ -4489,7 +4508,7 @@ function obtainInputMasks(uint256 nIndices) external;
             impl ::core::convert::From<obtainInputMasksReturn>
             for UnderlyingRustTuple<'_> {
                 fn from(value: obtainInputMasksReturn) -> Self {
-                    ()
+                    (value._0,)
                 }
             }
             #[automatically_derived]
@@ -4497,15 +4516,8 @@ function obtainInputMasks(uint256 nIndices) external;
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for obtainInputMasksReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
+                    Self { _0: tuple.0 }
                 }
-            }
-        }
-        impl obtainInputMasksReturn {
-            fn _tokenize(
-                &self,
-            ) -> <obtainInputMasksCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
             }
         }
         #[automatically_derived]
@@ -4514,8 +4526,12 @@ function obtainInputMasks(uint256 nIndices) external;
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = obtainInputMasksReturn;
-            type ReturnTuple<'a> = ();
+            type Return = alloy::sol_types::private::Vec<
+                alloy::sol_types::private::primitives::aliases::U256,
+            >;
+            type ReturnTuple<'a> = (
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+            );
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
@@ -4537,14 +4553,21 @@ function obtainInputMasks(uint256 nIndices) external;
             }
             #[inline]
             fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                obtainInputMasksReturn::_tokenize(ret)
+                (
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Uint<256>,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
             }
             #[inline]
             fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
+                    .map(|r| {
+                        let r: obtainInputMasksReturn = r.into();
+                        r._0
+                    })
             }
             #[inline]
             fn abi_decode_returns_validate(
@@ -4553,7 +4576,10 @@ function obtainInputMasks(uint256 nIndices) external;
                 <Self::ReturnTuple<
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Into::into)
+                    .map(|r| {
+                        let r: obtainInputMasksReturn = r.into();
+                        r._0
+                    })
             }
         }
     };
