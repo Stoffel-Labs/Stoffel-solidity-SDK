@@ -55,6 +55,8 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @param reservedIndex The index used for this input
     event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
 
+    event ClientAuthenticated(address indexed client, uint256 nonce);
+
     error NotEnoughIndices(uint256 requested, uint256 available);
 
     error IndexNotReserved(address client, uint256 index);
@@ -143,6 +145,11 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         bytes32 hashedMsg = MessageHashUtils.toEthSignedMessageHash(keccak256(abi.encode(nonce)));
         address clientAddress = ECDSA.recover(hashedMsg, signature);
 
-        return clientAddress == clientAddr;
+        if (clientAddress == clientAddr) {
+	    emit ClientAuthenticated(clientAddr, nonce);
+	    return true;
+	} else {
+	    return false;
+	}
     }
 }

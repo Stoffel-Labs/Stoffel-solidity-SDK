@@ -13,6 +13,7 @@ interface StoffelInputManager {
     error NotEnoughIndices(uint256 requested, uint256 available);
     error NotEnoughMPCParties(uint256 current, uint256 required);
 
+    event ClientAuthenticated(address indexed client, uint256 nonce);
     event IndexBufferEvent(uint256 totalIndices, address designatedParty);
     event InitializeStoffelAccessControl(uint256 nParties, uint256 t, address initializer);
     event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
@@ -411,6 +412,25 @@ interface StoffelInputManager {
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "ClientAuthenticated",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "nonce",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -1490,6 +1510,122 @@ error NotEnoughMPCParties(uint256 current, uint256 required);
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Event with signature `ClientAuthenticated(address,uint256)` and selector `0x23d369583ce23023a1ca4baf14a48693a3ee9b3abf2483e41d639e57cb1f9dab`.
+```solidity
+event ClientAuthenticated(address indexed client, uint256 nonce);
+```*/
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    #[derive(Clone)]
+    pub struct ClientAuthenticated {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub nonce: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[automatically_derived]
+        impl alloy_sol_types::SolEvent for ClientAuthenticated {
+            type DataTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type DataToken<'a> = <Self::DataTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type TopicList = (
+                alloy_sol_types::sol_data::FixedBytes<32>,
+                alloy::sol_types::sol_data::Address,
+            );
+            const SIGNATURE: &'static str = "ClientAuthenticated(address,uint256)";
+            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
+                35u8, 211u8, 105u8, 88u8, 60u8, 226u8, 48u8, 35u8, 161u8, 202u8, 75u8,
+                175u8, 20u8, 164u8, 134u8, 147u8, 163u8, 238u8, 155u8, 58u8, 191u8, 36u8,
+                131u8, 228u8, 29u8, 99u8, 158u8, 87u8, 203u8, 31u8, 157u8, 171u8,
+            ]);
+            const ANONYMOUS: bool = false;
+            #[allow(unused_variables)]
+            #[inline]
+            fn new(
+                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
+                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                Self {
+                    client: topics.1,
+                    nonce: data.0,
+                }
+            }
+            #[inline]
+            fn check_signature(
+                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
+            ) -> alloy_sol_types::Result<()> {
+                if topics.0 != Self::SIGNATURE_HASH {
+                    return Err(
+                        alloy_sol_types::Error::invalid_event_signature_hash(
+                            Self::SIGNATURE,
+                            topics.0,
+                            Self::SIGNATURE_HASH,
+                        ),
+                    );
+                }
+                Ok(())
+            }
+            #[inline]
+            fn tokenize_body(&self) -> Self::DataToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.nonce),
+                )
+            }
+            #[inline]
+            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
+                (Self::SIGNATURE_HASH.into(), self.client.clone())
+            }
+            #[inline]
+            fn encode_topics_raw(
+                &self,
+                out: &mut [alloy_sol_types::abi::token::WordToken],
+            ) -> alloy_sol_types::Result<()> {
+                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
+                    return Err(alloy_sol_types::Error::Overrun);
+                }
+                out[0usize] = alloy_sol_types::abi::token::WordToken(
+                    Self::SIGNATURE_HASH,
+                );
+                out[1usize] = <alloy::sol_types::sol_data::Address as alloy_sol_types::EventTopic>::encode_topic(
+                    &self.client,
+                );
+                Ok(())
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::IntoLogData for ClientAuthenticated {
+            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+                From::from(self)
+            }
+            fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                From::from(&self)
+            }
+        }
+        #[automatically_derived]
+        impl From<&ClientAuthenticated> for alloy_sol_types::private::LogData {
+            #[inline]
+            fn from(this: &ClientAuthenticated) -> alloy_sol_types::private::LogData {
+                alloy_sol_types::SolEvent::encode_log_data(this)
             }
         }
     };
@@ -6938,6 +7074,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum StoffelInputManagerEvents {
         #[allow(missing_docs)]
+        ClientAuthenticated(ClientAuthenticated),
+        #[allow(missing_docs)]
         IndexBufferEvent(IndexBufferEvent),
         #[allow(missing_docs)]
         InitializeStoffelAccessControl(InitializeStoffelAccessControl),
@@ -6960,6 +7098,11 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         ///
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
+            [
+                35u8, 211u8, 105u8, 88u8, 60u8, 226u8, 48u8, 35u8, 161u8, 202u8, 75u8,
+                175u8, 20u8, 164u8, 134u8, 147u8, 163u8, 238u8, 155u8, 58u8, 191u8, 36u8,
+                131u8, 228u8, 29u8, 99u8, 158u8, 87u8, 203u8, 31u8, 157u8, 171u8,
+            ],
             [
                 47u8, 135u8, 136u8, 17u8, 126u8, 126u8, 255u8, 29u8, 130u8, 233u8, 38u8,
                 236u8, 121u8, 73u8, 1u8, 209u8, 124u8, 120u8, 2u8, 74u8, 80u8, 39u8, 9u8,
@@ -6998,6 +7141,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         ];
         /// The names of the variants in the same order as `SELECTORS`.
         pub const VARIANT_NAMES: &'static [&'static str] = &[
+            ::core::stringify!(ClientAuthenticated),
             ::core::stringify!(RoleGranted),
             ::core::stringify!(InitializeStoffelAccessControl),
             ::core::stringify!(ReservedInputEvent),
@@ -7008,6 +7152,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         ];
         /// The signatures in the same order as `SELECTORS`.
         pub const SIGNATURES: &'static [&'static str] = &[
+            <ClientAuthenticated as alloy_sol_types::SolEvent>::SIGNATURE,
             <RoleGranted as alloy_sol_types::SolEvent>::SIGNATURE,
             <InitializeStoffelAccessControl as alloy_sol_types::SolEvent>::SIGNATURE,
             <ReservedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
@@ -7040,12 +7185,21 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for StoffelInputManagerEvents {
         const NAME: &'static str = "StoffelInputManagerEvents";
-        const COUNT: usize = 7usize;
+        const COUNT: usize = 8usize;
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
         ) -> alloy_sol_types::Result<Self> {
             match topics.first().copied() {
+                Some(
+                    <ClientAuthenticated as alloy_sol_types::SolEvent>::SIGNATURE_HASH,
+                ) => {
+                    <ClientAuthenticated as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                        )
+                        .map(Self::ClientAuthenticated)
+                }
                 Some(<IndexBufferEvent as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
                     <IndexBufferEvent as alloy_sol_types::SolEvent>::decode_raw_log(
                             topics,
@@ -7117,6 +7271,9 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     impl alloy_sol_types::private::IntoLogData for StoffelInputManagerEvents {
         fn to_log_data(&self) -> alloy_sol_types::private::LogData {
             match self {
+                Self::ClientAuthenticated(inner) => {
+                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
+                }
                 Self::IndexBufferEvent(inner) => {
                     alloy_sol_types::private::IntoLogData::to_log_data(inner)
                 }
@@ -7142,6 +7299,9 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         }
         fn into_log_data(self) -> alloy_sol_types::private::LogData {
             match self {
+                Self::ClientAuthenticated(inner) => {
+                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
+                }
                 Self::IndexBufferEvent(inner) => {
                     alloy_sol_types::private::IntoLogData::into_log_data(inner)
                 }
@@ -7508,6 +7668,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::Event<&P, E, N> {
             alloy_contract::Event::new_sol(&self.provider, &self.address)
+        }
+        ///Creates a new event filter for the [`ClientAuthenticated`] event.
+        pub fn ClientAuthenticated_filter(
+            &self,
+        ) -> alloy_contract::Event<&P, ClientAuthenticated, N> {
+            self.event_filter::<ClientAuthenticated>()
         }
         ///Creates a new event filter for the [`IndexBufferEvent`] event.
         pub fn IndexBufferEvent_filter(
