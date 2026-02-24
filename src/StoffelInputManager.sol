@@ -17,6 +17,9 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @dev Address(0) indicates the index is available for reservation
     mapping(uint256 => address) internal reservedInputIndices;
 
+    // first value is total number of auths, second is successful auths
+    mapping(address => uint256[2]) internal clientAuths;
+
     /// @notice Total number of input mask indices available
     /// @dev Set once during preprocessing by the designated party
     uint256 internal nTotalIndices;
@@ -26,6 +29,10 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     uint256 internal nNextIndex;
 
     uint256 internal nInputsSubmitted;
+
+    uint256 public baseNonce;
+
+    uint256 internal t;
 
     /// @notice Structure representing a client's masked input
     /// @dev Contains the reserved index and the masked value submitted by the client
@@ -46,8 +53,8 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
     /// @notice Emitted when a client reserves an input mask index
     /// @param client Address of the client reserving the index
-    /// @param reservedIndex The index that was reserved
-    event ReservedInputEvent(address client, uint256 reservedIndex);
+    /// @param reservedIndices The indices that have been reserved
+    event ReservedInputEvent(address client, uint256[] reservedIndices);
 
     /// @notice Emitted when a client submits their masked input
     /// @param client Address of the client submitting the input
@@ -55,30 +62,43 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @param reservedIndex The index used for this input
     event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
 
-    event ClientAuthenticated(address indexed client, uint256 nonce);
+    event ClientAuthenticated(address indexed client, bool success);
 
     error NotEnoughIndices(uint256 requested, uint256 available);
 
     error IndexNotReserved(address client, uint256 index);
 
-    constructor (uint256 nIndicesToReserve) {
-        _resetInputManager(nIndicesToReserve);
+    error NoIndicesReserved(address client);
+
+    error IndicesAlreadyReserved(address client);
+
+    constructor (uint256 nIndicesToReserve, uint256 t) {
+	baseNonce = 0;
+        _resetInputManager(nIndicesToReserve, t);
     }
 
     /// @notice Initializes the input mask buffer with a specified number of indices
     /// @param nIndicesToReserve Number of input mask indices to make available
     /// @dev Can only be called once by the designated party during preprocessing.
     ///      This determines how many clients can participate in the computation.
-    function _resetInputManager(uint256 nIndicesToReserve) internal {
+    function _resetInputManager(uint256 nIndicesToReserve, uint256 _t) internal {
         nTotalIndices = nIndicesToReserve;
 	nNextIndex = 0;
 	nInputsSubmitted = 0;
+	t = _t;
+	// base nonce is NOT reset on purpose
+
+	for (uint256 i = 0; i < nTotalIndices; i++) {
+	    delete clientInputs[reservedInputIndices[i]];
+	    delete clientAuths[reservedInputIndices[i]];
+	    reservedInputIndices[i] = address(0);
+	}
 
         emit IndexBufferEvent(nTotalIndices, msg.sender);
     }
 
-    function resetInputManager(uint256 nIndicesToReserve) external onlyRole(DESIGNATED_PARTY_ROLE) {
-        _resetInputManager(nIndicesToReserve);
+    function resetInputManager(uint256 nIndicesToReserve, uint256 t) external onlyRole(DESIGNATED_PARTY_ROLE) {
+        _resetInputManager(nIndicesToReserve, t);
     }
 
     /// @notice Reserves input mask indices for the calling client
@@ -86,10 +106,19 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @dev Clients must reserve an index before they can request the corresponding
     ///      input mask from MPC nodes and submit their masked input.
     function obtainInputMasks(uint256 nIndices) external override returns (uint256[] memory) {
+	require(nIndices == 1, "CURRENTLY ONLY ONE INDEX PER CLIENT ALLOWED");
+
 	uint256 nIndicesLeft = nTotalIndices - nNextIndex; 
 
         if (nIndices > nIndicesLeft) {
 	    revert NotEnoughIndices(nIndices, nIndicesLeft);
+	}
+
+	// check if client already reserved indices
+	for (uint256 i = 0; i < nTotalIndices; i++) {
+	    if (reservedInputIndices[i] == msg.sender) {
+		revert IndicesAlreadyReserved(msg.sender);
+	    }
 	}
 
 	uint256 nFinalIndex = nNextIndex + nIndices - 1;
@@ -99,11 +128,11 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 	for ( ; nNextIndex <= nFinalIndex; nNextIndex++) {
             reservedInputIndices[nNextIndex] = msg.sender;
             indices[nNextIndex - firstIndex] = nNextIndex;
-            emit ReservedInputEvent(msg.sender, nNextIndex);
 	}
 
 	nIndicesLeft -= nIndices;
 
+        emit ReservedInputEvent(msg.sender, indices);
 	return indices;
     }
 
@@ -130,26 +159,42 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     }
 
     /// @notice Authenticates a client using ECDSA signature verification, proving ownership of an address
-    /// @param nonce Unique identifier for the authentication request
     /// @param clientAddr Address whose ownership is to be proved
     /// @param signature ECDSA signature over the nonce
-    /// @return True if the signature was created by the claimed client address
     /// @dev Called off-chain by MPC nodes to verify client identity before
     ///      providing input masks. Uses EIP-191 signed message format.
-    function authenticateClient(uint256 nonce, address clientAddr, bytes calldata signature)
+    function authenticateClient(address clientAddr, bytes calldata signature)
         external
         override
         onlyRole(PARTY_ROLE)
-        returns (bool)
     {
+	// the nonce is the current base value plus the lowest reserved index
+	uint256 lowestReservedIndex = nTotalIndices;
+	for (uint256 i = 0; i < nTotalIndices; i++) {
+	    if (reservedInputIndices[i] == clientAddr) {
+		lowestReservedIndex = i;
+		break;
+	    }
+	}
+	if (lowestReservedIndex == nTotalIndices) {
+            revert NoIndicesReserved(reservedInputIndices[0]);
+	}
+	uint256 nonce = baseNonce + lowestReservedIndex;
+
         bytes32 hashedMsg = MessageHashUtils.toEthSignedMessageHash(keccak256(abi.encode(nonce)));
         address clientAddress = ECDSA.recover(hashedMsg, signature);
 
+	++clientAuths[clientAddr][0];
         if (clientAddress == clientAddr) {
-	    emit ClientAuthenticated(clientAddr, nonce);
-	    return true;
-	} else {
-	    return false;
+	    ++clientAuths[clientAddr][1];
+	}
+
+	if (clientAuths[clientAddr][0] == 2 * t + 1) {
+            bool success = false;
+	    if (clientAuths[clientAddr][1] >= t + 1) {
+	    	success = true;
+	    }
+            emit ClientAuthenticated(clientAddr, success);
 	}
     }
 }

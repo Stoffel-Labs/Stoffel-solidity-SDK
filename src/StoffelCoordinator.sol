@@ -172,7 +172,7 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
         _timedRoundTransitionGoTo(transitionRound, gotoRound, whenToTransition);
     }
 
-    constructor (bytes32 stoffelProgramHash, uint256 t, address[] memory initialMPCNodes, uint256 nInputs) StoffelAccessControl(t, initialMPCNodes) StoffelInputManager(nInputs) Ownable(msg.sender) {
+    constructor (bytes32 stoffelProgramHash, uint256 t, address[] memory initialMPCNodes, uint256 nInputs) StoffelAccessControl(t, initialMPCNodes) StoffelInputManager(nInputs, t) Ownable(msg.sender) {
         _resetCoordinator(stoffelProgramHash, initialMPCNodes[0]);
     }
 
@@ -195,13 +195,12 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
 
     function resetCoordinator(
         bytes32 stoffelProgramHash,
-        uint256 n,
         uint256 t,
         address[] memory initialMPCNodes,
 	uint256 nInputs
     ) external onlyRole(DESIGNATED_PARTY_ROLE) {
 	super._resetAccessControl(t, initialMPCNodes);
-	super._resetInputManager(nInputs);
+	super._resetInputManager(nInputs, t);
 	_resetCoordinator(stoffelProgramHash, initialMPCNodes[0]);
     }
 

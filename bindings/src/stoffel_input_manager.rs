@@ -9,15 +9,17 @@ interface StoffelInputManager {
     error ECDSAInvalidSignatureLength(uint256 length);
     error ECDSAInvalidSignatureS(bytes32 s);
     error IndexNotReserved(address client, uint256 index);
+    error IndicesAlreadyReserved(address client);
+    error NoIndicesReserved(address client);
     error NotAnExistingParty(address account);
     error NotEnoughIndices(uint256 requested, uint256 available);
     error NotEnoughMPCParties(uint256 current, uint256 required);
 
-    event ClientAuthenticated(address indexed client, uint256 nonce);
+    event ClientAuthenticated(address indexed client, bool success);
     event IndexBufferEvent(uint256 totalIndices, address designatedParty);
     event InitializeStoffelAccessControl(uint256 nParties, uint256 t, address initializer);
     event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
-    event ReservedInputEvent(address client, uint256 reservedIndex);
+    event ReservedInputEvent(address client, uint256[] reservedIndices);
     event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole);
     event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
     event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
@@ -25,8 +27,9 @@ interface StoffelInputManager {
     function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
     function DESIGNATED_PARTY_ROLE() external view returns (bytes32);
     function PARTY_ROLE() external view returns (bytes32);
-    function authenticateClient(uint256 nonce, address clientAddr, bytes memory signature) external returns (bool);
+    function authenticateClient(address clientAddr, bytes memory signature) external;
     function availableInputMasks() external view returns (uint256);
+    function baseNonce() external view returns (uint256);
     function getRoleAdmin(bytes32 role) external view returns (bytes32);
     function getRoleMember(bytes32 role, uint256 index) external view returns (address);
     function getRoleMemberCount(bytes32 role) external view returns (uint256);
@@ -38,7 +41,7 @@ interface StoffelInputManager {
     function obtainInputMasks(uint256 nIndices) external returns (uint256[] memory);
     function renounceRole(bytes32 role, address account) external;
     function resetAccessControl(uint256 t, address[] memory initialMPCNodes) external;
-    function resetInputManager(uint256 nIndicesToReserve) external;
+    function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
     function revokeRole(bytes32 role, address account) external;
     function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
@@ -92,11 +95,6 @@ interface StoffelInputManager {
     "name": "authenticateClient",
     "inputs": [
       {
-        "name": "nonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "clientAddr",
         "type": "address",
         "internalType": "address"
@@ -107,18 +105,25 @@ interface StoffelInputManager {
         "internalType": "bytes"
       }
     ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
+    "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
     "type": "function",
     "name": "availableInputMasks",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "baseNonce",
     "inputs": [],
     "outputs": [
       {
@@ -353,6 +358,11 @@ interface StoffelInputManager {
         "name": "nIndicesToReserve",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "t",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -424,10 +434,10 @@ interface StoffelInputManager {
         "internalType": "address"
       },
       {
-        "name": "nonce",
-        "type": "uint256",
+        "name": "success",
+        "type": "bool",
         "indexed": false,
-        "internalType": "uint256"
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -512,10 +522,10 @@ interface StoffelInputManager {
         "internalType": "address"
       },
       {
-        "name": "reservedIndex",
-        "type": "uint256",
+        "name": "reservedIndices",
+        "type": "uint256[]",
         "indexed": false,
-        "internalType": "uint256"
+        "internalType": "uint256[]"
       }
     ],
     "anonymous": false
@@ -656,6 +666,28 @@ interface StoffelInputManager {
         "name": "index",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "IndicesAlreadyReserved",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NoIndicesReserved",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },
@@ -1244,6 +1276,168 @@ error IndexNotReserved(address client, uint256 index);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `IndicesAlreadyReserved(address)` and selector `0xaca92f09`.
+```solidity
+error IndicesAlreadyReserved(address client);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct IndicesAlreadyReserved {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<IndicesAlreadyReserved> for UnderlyingRustTuple<'_> {
+            fn from(value: IndicesAlreadyReserved) -> Self {
+                (value.client,)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for IndicesAlreadyReserved {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { client: tuple.0 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for IndicesAlreadyReserved {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "IndicesAlreadyReserved(address)";
+            const SELECTOR: [u8; 4] = [172u8, 169u8, 47u8, 9u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.client,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `NoIndicesReserved(address)` and selector `0x6faf9f05`.
+```solidity
+error NoIndicesReserved(address client);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct NoIndicesReserved {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<NoIndicesReserved> for UnderlyingRustTuple<'_> {
+            fn from(value: NoIndicesReserved) -> Self {
+                (value.client,)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for NoIndicesReserved {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { client: tuple.0 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for NoIndicesReserved {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "NoIndicesReserved(address)";
+            const SELECTOR: [u8; 4] = [111u8, 175u8, 159u8, 5u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.client,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `NotAnExistingParty(address)` and selector `0xabdce06a`.
 ```solidity
 error NotAnExistingParty(address account);
@@ -1515,9 +1709,9 @@ error NotEnoughMPCParties(uint256 current, uint256 required);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Event with signature `ClientAuthenticated(address,uint256)` and selector `0x23d369583ce23023a1ca4baf14a48693a3ee9b3abf2483e41d639e57cb1f9dab`.
+    /**Event with signature `ClientAuthenticated(address,bool)` and selector `0x407009200520f9f10584813c0b95441ab320f6b08d97ebdaaf1e824eedd9d7c3`.
 ```solidity
-event ClientAuthenticated(address indexed client, uint256 nonce);
+event ClientAuthenticated(address indexed client, bool success);
 ```*/
     #[allow(
         non_camel_case_types,
@@ -1530,7 +1724,7 @@ event ClientAuthenticated(address indexed client, uint256 nonce);
         #[allow(missing_docs)]
         pub client: alloy::sol_types::private::Address,
         #[allow(missing_docs)]
-        pub nonce: alloy::sol_types::private::primitives::aliases::U256,
+        pub success: bool,
     }
     #[allow(
         non_camel_case_types,
@@ -1542,7 +1736,7 @@ event ClientAuthenticated(address indexed client, uint256 nonce);
         use alloy::sol_types as alloy_sol_types;
         #[automatically_derived]
         impl alloy_sol_types::SolEvent for ClientAuthenticated {
-            type DataTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type DataTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             type DataToken<'a> = <Self::DataTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
@@ -1550,11 +1744,11 @@ event ClientAuthenticated(address indexed client, uint256 nonce);
                 alloy_sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::Address,
             );
-            const SIGNATURE: &'static str = "ClientAuthenticated(address,uint256)";
+            const SIGNATURE: &'static str = "ClientAuthenticated(address,bool)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                35u8, 211u8, 105u8, 88u8, 60u8, 226u8, 48u8, 35u8, 161u8, 202u8, 75u8,
-                175u8, 20u8, 164u8, 134u8, 147u8, 163u8, 238u8, 155u8, 58u8, 191u8, 36u8,
-                131u8, 228u8, 29u8, 99u8, 158u8, 87u8, 203u8, 31u8, 157u8, 171u8,
+                64u8, 112u8, 9u8, 32u8, 5u8, 32u8, 249u8, 241u8, 5u8, 132u8, 129u8, 60u8,
+                11u8, 149u8, 68u8, 26u8, 179u8, 32u8, 246u8, 176u8, 141u8, 151u8, 235u8,
+                218u8, 175u8, 30u8, 130u8, 78u8, 237u8, 217u8, 215u8, 195u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1565,7 +1759,7 @@ event ClientAuthenticated(address indexed client, uint256 nonce);
             ) -> Self {
                 Self {
                     client: topics.1,
-                    nonce: data.0,
+                    success: data.0,
                 }
             }
             #[inline]
@@ -1586,9 +1780,9 @@ event ClientAuthenticated(address indexed client, uint256 nonce);
             #[inline]
             fn tokenize_body(&self) -> Self::DataToken<'_> {
                 (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.nonce),
+                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
+                        &self.success,
+                    ),
                 )
             }
             #[inline]
@@ -1996,9 +2190,9 @@ event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedInde
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Event with signature `ReservedInputEvent(address,uint256)` and selector `0xabde16b7a9192c31c6231b1539bad6fed77635de4c008718dbdcafb7b8363afe`.
+    /**Event with signature `ReservedInputEvent(address,uint256[])` and selector `0x1e14abe5d0cdb96adde7b9eca9b14bc08df623b5805afde5a3f0acadc2bf4f5b`.
 ```solidity
-event ReservedInputEvent(address client, uint256 reservedIndex);
+event ReservedInputEvent(address client, uint256[] reservedIndices);
 ```*/
     #[allow(
         non_camel_case_types,
@@ -2011,7 +2205,9 @@ event ReservedInputEvent(address client, uint256 reservedIndex);
         #[allow(missing_docs)]
         pub client: alloy::sol_types::private::Address,
         #[allow(missing_docs)]
-        pub reservedIndex: alloy::sol_types::private::primitives::aliases::U256,
+        pub reservedIndices: alloy::sol_types::private::Vec<
+            alloy::sol_types::private::primitives::aliases::U256,
+        >,
     }
     #[allow(
         non_camel_case_types,
@@ -2025,17 +2221,18 @@ event ReservedInputEvent(address client, uint256 reservedIndex);
         impl alloy_sol_types::SolEvent for ReservedInputEvent {
             type DataTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
-                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
             );
             type DataToken<'a> = <Self::DataTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
-            const SIGNATURE: &'static str = "ReservedInputEvent(address,uint256)";
+            const SIGNATURE: &'static str = "ReservedInputEvent(address,uint256[])";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                171u8, 222u8, 22u8, 183u8, 169u8, 25u8, 44u8, 49u8, 198u8, 35u8, 27u8,
-                21u8, 57u8, 186u8, 214u8, 254u8, 215u8, 118u8, 53u8, 222u8, 76u8, 0u8,
-                135u8, 24u8, 219u8, 220u8, 175u8, 183u8, 184u8, 54u8, 58u8, 254u8,
+                30u8, 20u8, 171u8, 229u8, 208u8, 205u8, 185u8, 106u8, 221u8, 231u8,
+                185u8, 236u8, 169u8, 177u8, 75u8, 192u8, 141u8, 246u8, 35u8, 181u8,
+                128u8, 90u8, 253u8, 229u8, 163u8, 240u8, 172u8, 173u8, 194u8, 191u8,
+                79u8, 91u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -2046,7 +2243,7 @@ event ReservedInputEvent(address client, uint256 reservedIndex);
             ) -> Self {
                 Self {
                     client: data.0,
-                    reservedIndex: data.1,
+                    reservedIndices: data.1,
                 }
             }
             #[inline]
@@ -2070,9 +2267,9 @@ event ReservedInputEvent(address client, uint256 reservedIndex);
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         &self.client,
                     ),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.reservedIndex),
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Uint<256>,
+                    > as alloy_sol_types::SolType>::tokenize(&self.reservedIndices),
                 )
             }
             #[inline]
@@ -2939,29 +3136,22 @@ function PARTY_ROLE() external view returns (bytes32);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `authenticateClient(uint256,address,bytes)` and selector `0xf9d8ff15`.
+    /**Function with signature `authenticateClient(address,bytes)` and selector `0x1ee4ee0f`.
 ```solidity
-function authenticateClient(uint256 nonce, address clientAddr, bytes memory signature) external returns (bool);
+function authenticateClient(address clientAddr, bytes memory signature) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct authenticateClientCall {
         #[allow(missing_docs)]
-        pub nonce: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub clientAddr: alloy::sol_types::private::Address,
         #[allow(missing_docs)]
         pub signature: alloy::sol_types::private::Bytes,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`authenticateClient(uint256,address,bytes)`](authenticateClientCall) function.
+    ///Container type for the return parameters of the [`authenticateClient(address,bytes)`](authenticateClientCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct authenticateClientReturn {
-        #[allow(missing_docs)]
-        pub _0: bool,
-    }
+    pub struct authenticateClientReturn {}
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -2974,13 +3164,11 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             #[doc(hidden)]
             #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
             );
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
                 alloy::sol_types::private::Address,
                 alloy::sol_types::private::Bytes,
             );
@@ -3000,7 +3188,7 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             impl ::core::convert::From<authenticateClientCall>
             for UnderlyingRustTuple<'_> {
                 fn from(value: authenticateClientCall) -> Self {
-                    (value.nonce, value.clientAddr, value.signature)
+                    (value.clientAddr, value.signature)
                 }
             }
             #[automatically_derived]
@@ -3009,9 +3197,8 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             for authenticateClientCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {
-                        nonce: tuple.0,
-                        clientAddr: tuple.1,
-                        signature: tuple.2,
+                        clientAddr: tuple.0,
+                        signature: tuple.1,
                     }
                 }
             }
@@ -3019,9 +3206,9 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
         {
             #[doc(hidden)]
             #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (bool,);
+            type UnderlyingRustTuple<'a> = ();
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
             fn _type_assertion(
@@ -3038,7 +3225,7 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             impl ::core::convert::From<authenticateClientReturn>
             for UnderlyingRustTuple<'_> {
                 fn from(value: authenticateClientReturn) -> Self {
-                    (value._0,)
+                    ()
                 }
             }
             #[automatically_derived]
@@ -3046,27 +3233,33 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for authenticateClientReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
+                    Self {}
                 }
+            }
+        }
+        impl authenticateClientReturn {
+            fn _tokenize(
+                &self,
+            ) -> <authenticateClientCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
             }
         }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for authenticateClientCall {
             type Parameters<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
             );
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type Return = authenticateClientReturn;
+            type ReturnTuple<'a> = ();
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "authenticateClient(uint256,address,bytes)";
-            const SELECTOR: [u8; 4] = [249u8, 216u8, 255u8, 21u8];
+            const SIGNATURE: &'static str = "authenticateClient(address,bytes)";
+            const SELECTOR: [u8; 4] = [30u8, 228u8, 238u8, 15u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -3076,9 +3269,6 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
                 (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.nonce),
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         &self.clientAddr,
                     ),
@@ -3089,21 +3279,14 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             }
             #[inline]
             fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
+                authenticateClientReturn::_tokenize(ret)
             }
             #[inline]
             fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: authenticateClientReturn = r.into();
-                        r._0
-                    })
+                    .map(Into::into)
             }
             #[inline]
             fn abi_decode_returns_validate(
@@ -3112,10 +3295,7 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
                 <Self::ReturnTuple<
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: authenticateClientReturn = r.into();
-                        r._0
-                    })
+                    .map(Into::into)
             }
         }
     };
@@ -3265,6 +3445,153 @@ function availableInputMasks() external view returns (uint256);
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
                         let r: availableInputMasksReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `baseNonce()` and selector `0x1c7453db`.
+```solidity
+function baseNonce() external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct baseNonceCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`baseNonce()`](baseNonceCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct baseNonceReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            #[allow(dead_code)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<baseNonceCall> for UnderlyingRustTuple<'_> {
+                fn from(value: baseNonceCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for baseNonceCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            #[allow(dead_code)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<baseNonceReturn> for UnderlyingRustTuple<'_> {
+                fn from(value: baseNonceReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for baseNonceReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for baseNonceCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "baseNonce()";
+            const SELECTOR: [u8; 4] = [28u8, 116u8, 83u8, 219u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: baseNonceReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: baseNonceReturn = r.into();
                         r._0
                     })
             }
@@ -5049,17 +5376,19 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `resetInputManager(uint256)` and selector `0xe23fb1f8`.
+    /**Function with signature `resetInputManager(uint256,uint256)` and selector `0x3b4338d1`.
 ```solidity
-function resetInputManager(uint256 nIndicesToReserve) external;
+function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct resetInputManagerCall {
         #[allow(missing_docs)]
         pub nIndicesToReserve: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub t: alloy::sol_types::private::primitives::aliases::U256,
     }
-    ///Container type for the return parameters of the [`resetInputManager(uint256)`](resetInputManagerCall) function.
+    ///Container type for the return parameters of the [`resetInputManager(uint256,uint256)`](resetInputManagerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct resetInputManagerReturn {}
@@ -5074,9 +5403,13 @@ function resetInputManager(uint256 nIndicesToReserve) external;
         {
             #[doc(hidden)]
             #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
                 alloy::sol_types::private::primitives::aliases::U256,
             );
             #[cfg(test)]
@@ -5095,7 +5428,7 @@ function resetInputManager(uint256 nIndicesToReserve) external;
             impl ::core::convert::From<resetInputManagerCall>
             for UnderlyingRustTuple<'_> {
                 fn from(value: resetInputManagerCall) -> Self {
-                    (value.nIndicesToReserve,)
+                    (value.nIndicesToReserve, value.t)
                 }
             }
             #[automatically_derived]
@@ -5103,7 +5436,10 @@ function resetInputManager(uint256 nIndicesToReserve) external;
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for resetInputManagerCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { nIndicesToReserve: tuple.0 }
+                    Self {
+                        nIndicesToReserve: tuple.0,
+                        t: tuple.1,
+                    }
                 }
             }
         }
@@ -5150,7 +5486,10 @@ function resetInputManager(uint256 nIndicesToReserve) external;
         }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for resetInputManagerCall {
-            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
@@ -5159,8 +5498,8 @@ function resetInputManager(uint256 nIndicesToReserve) external;
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "resetInputManager(uint256)";
-            const SELECTOR: [u8; 4] = [226u8, 63u8, 177u8, 248u8];
+            const SIGNATURE: &'static str = "resetInputManager(uint256,uint256)";
+            const SELECTOR: [u8; 4] = [59u8, 67u8, 56u8, 209u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -5173,6 +5512,9 @@ function resetInputManager(uint256 nIndicesToReserve) external;
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.nIndicesToReserve),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.t),
                 )
             }
             #[inline]
@@ -5695,6 +6037,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         availableInputMasks(availableInputMasksCall),
         #[allow(missing_docs)]
+        baseNonce(baseNonceCall),
+        #[allow(missing_docs)]
         getRoleAdmin(getRoleAdminCall),
         #[allow(missing_docs)]
         getRoleMember(getRoleMemberCall),
@@ -5736,11 +6080,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             [1u8, 255u8, 201u8, 167u8],
             [11u8, 218u8, 129u8, 207u8],
             [19u8, 255u8, 109u8, 213u8],
+            [28u8, 116u8, 83u8, 219u8],
+            [30u8, 228u8, 238u8, 15u8],
             [35u8, 40u8, 189u8, 18u8],
             [36u8, 138u8, 156u8, 163u8],
             [47u8, 47u8, 241u8, 93u8],
             [48u8, 16u8, 76u8, 62u8],
             [54u8, 86u8, 138u8, 190u8],
+            [59u8, 67u8, 56u8, 209u8],
             [127u8, 53u8, 181u8, 96u8],
             [144u8, 16u8, 208u8, 124u8],
             [145u8, 209u8, 72u8, 84u8],
@@ -5749,9 +6096,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             [175u8, 32u8, 111u8, 40u8],
             [202u8, 21u8, 200u8, 115u8],
             [213u8, 71u8, 116u8, 31u8],
-            [226u8, 63u8, 177u8, 248u8],
             [235u8, 174u8, 53u8, 231u8],
-            [249u8, 216u8, 255u8, 21u8],
             [252u8, 120u8, 178u8, 232u8],
         ];
         /// The names of the variants in the same order as `SELECTORS`.
@@ -5759,11 +6104,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             ::core::stringify!(supportsInterface),
             ::core::stringify!(submitMaskedInput),
             ::core::stringify!(isDesignatedParty),
+            ::core::stringify!(baseNonce),
+            ::core::stringify!(authenticateClient),
             ::core::stringify!(availableInputMasks),
             ::core::stringify!(getRoleAdmin),
             ::core::stringify!(grantRole),
             ::core::stringify!(PARTY_ROLE),
             ::core::stringify!(renounceRole),
+            ::core::stringify!(resetInputManager),
             ::core::stringify!(DESIGNATED_PARTY_ROLE),
             ::core::stringify!(getRoleMember),
             ::core::stringify!(hasRole),
@@ -5772,9 +6120,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             ::core::stringify!(resetAccessControl),
             ::core::stringify!(getRoleMemberCount),
             ::core::stringify!(revokeRole),
-            ::core::stringify!(resetInputManager),
             ::core::stringify!(obtainInputMasks),
-            ::core::stringify!(authenticateClient),
             ::core::stringify!(isParty),
         ];
         /// The signatures in the same order as `SELECTORS`.
@@ -5782,11 +6128,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             <supportsInterfaceCall as alloy_sol_types::SolCall>::SIGNATURE,
             <submitMaskedInputCall as alloy_sol_types::SolCall>::SIGNATURE,
             <isDesignatedPartyCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <baseNonceCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <authenticateClientCall as alloy_sol_types::SolCall>::SIGNATURE,
             <availableInputMasksCall as alloy_sol_types::SolCall>::SIGNATURE,
             <getRoleAdminCall as alloy_sol_types::SolCall>::SIGNATURE,
             <grantRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <PARTY_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
             <renounceRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <resetInputManagerCall as alloy_sol_types::SolCall>::SIGNATURE,
             <DESIGNATED_PARTY_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
             <getRoleMemberCall as alloy_sol_types::SolCall>::SIGNATURE,
             <hasRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
@@ -5795,9 +6144,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             <resetAccessControlCall as alloy_sol_types::SolCall>::SIGNATURE,
             <getRoleMemberCountCall as alloy_sol_types::SolCall>::SIGNATURE,
             <revokeRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <resetInputManagerCall as alloy_sol_types::SolCall>::SIGNATURE,
             <obtainInputMasksCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <authenticateClientCall as alloy_sol_types::SolCall>::SIGNATURE,
             <isPartyCall as alloy_sol_types::SolCall>::SIGNATURE,
         ];
         /// Returns the signature for the given selector, if known.
@@ -5825,7 +6172,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     impl alloy_sol_types::SolInterface for StoffelInputManagerCalls {
         const NAME: &'static str = "StoffelInputManagerCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 20usize;
+        const COUNT: usize = 21usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -5843,6 +6190,9 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 }
                 Self::availableInputMasks(_) => {
                     <availableInputMasksCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::baseNonce(_) => {
+                    <baseNonceCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::getRoleAdmin(_) => {
                     <getRoleAdminCall as alloy_sol_types::SolCall>::SELECTOR
@@ -5938,6 +6288,26 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     isDesignatedParty
                 },
                 {
+                    fn baseNonce(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
+                        <baseNonceCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                            .map(StoffelInputManagerCalls::baseNonce)
+                    }
+                    baseNonce
+                },
+                {
+                    fn authenticateClient(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
+                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelInputManagerCalls::authenticateClient)
+                    }
+                    authenticateClient
+                },
+                {
                     fn availableInputMasks(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
@@ -5989,6 +6359,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerCalls::renounceRole)
                     }
                     renounceRole
+                },
+                {
+                    fn resetInputManager(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
+                        <resetInputManagerCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelInputManagerCalls::resetInputManager)
+                    }
+                    resetInputManager
                 },
                 {
                     fn DESIGNATED_PARTY_ROLE(
@@ -6077,17 +6458,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     revokeRole
                 },
                 {
-                    fn resetInputManager(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
-                        <resetInputManagerCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(StoffelInputManagerCalls::resetInputManager)
-                    }
-                    resetInputManager
-                },
-                {
                     fn obtainInputMasks(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
@@ -6097,17 +6467,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerCalls::obtainInputMasks)
                     }
                     obtainInputMasks
-                },
-                {
-                    fn authenticateClient(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
-                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(StoffelInputManagerCalls::authenticateClient)
-                    }
-                    authenticateClient
                 },
                 {
                     fn isParty(
@@ -6172,6 +6531,28 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     isDesignatedParty
                 },
                 {
+                    fn baseNonce(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
+                        <baseNonceCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelInputManagerCalls::baseNonce)
+                    }
+                    baseNonce
+                },
+                {
+                    fn authenticateClient(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
+                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelInputManagerCalls::authenticateClient)
+                    }
+                    authenticateClient
+                },
+                {
                     fn availableInputMasks(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
@@ -6225,6 +6606,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerCalls::renounceRole)
                     }
                     renounceRole
+                },
+                {
+                    fn resetInputManager(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
+                        <resetInputManagerCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelInputManagerCalls::resetInputManager)
+                    }
+                    resetInputManager
                 },
                 {
                     fn DESIGNATED_PARTY_ROLE(
@@ -6315,17 +6707,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     revokeRole
                 },
                 {
-                    fn resetInputManager(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
-                        <resetInputManagerCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelInputManagerCalls::resetInputManager)
-                    }
-                    resetInputManager
-                },
-                {
                     fn obtainInputMasks(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
@@ -6335,17 +6716,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerCalls::obtainInputMasks)
                     }
                     obtainInputMasks
-                },
-                {
-                    fn authenticateClient(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
-                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelInputManagerCalls::authenticateClient)
-                    }
-                    authenticateClient
                 },
                 {
                     fn isParty(
@@ -6394,6 +6764,9 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     <availableInputMasksCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
+                }
+                Self::baseNonce(inner) => {
+                    <baseNonceCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
                 Self::getRoleAdmin(inner) => {
                     <getRoleAdminCall as alloy_sol_types::SolCall>::abi_encoded_size(
@@ -6493,6 +6866,12 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 }
                 Self::availableInputMasks(inner) => {
                     <availableInputMasksCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::baseNonce(inner) => {
+                    <baseNonceCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -6602,6 +6981,10 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         IndexNotReserved(IndexNotReserved),
         #[allow(missing_docs)]
+        IndicesAlreadyReserved(IndicesAlreadyReserved),
+        #[allow(missing_docs)]
+        NoIndicesReserved(NoIndicesReserved),
+        #[allow(missing_docs)]
         NotAnExistingParty(NotAnExistingParty),
         #[allow(missing_docs)]
         NotEnoughIndices(NotEnoughIndices),
@@ -6618,7 +7001,9 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [58u8, 35u8, 98u8, 104u8],
             [102u8, 151u8, 178u8, 50u8],
+            [111u8, 175u8, 159u8, 5u8],
             [171u8, 220u8, 224u8, 106u8],
+            [172u8, 169u8, 47u8, 9u8],
             [215u8, 139u8, 206u8, 12u8],
             [223u8, 61u8, 117u8, 226u8],
             [226u8, 81u8, 125u8, 63u8],
@@ -6630,7 +7015,9 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         pub const VARIANT_NAMES: &'static [&'static str] = &[
             ::core::stringify!(NotEnoughMPCParties),
             ::core::stringify!(AccessControlBadConfirmation),
+            ::core::stringify!(NoIndicesReserved),
             ::core::stringify!(NotAnExistingParty),
+            ::core::stringify!(IndicesAlreadyReserved),
             ::core::stringify!(ECDSAInvalidSignatureS),
             ::core::stringify!(NotEnoughIndices),
             ::core::stringify!(AccessControlUnauthorizedAccount),
@@ -6642,7 +7029,9 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         pub const SIGNATURES: &'static [&'static str] = &[
             <NotEnoughMPCParties as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlBadConfirmation as alloy_sol_types::SolError>::SIGNATURE,
+            <NoIndicesReserved as alloy_sol_types::SolError>::SIGNATURE,
             <NotAnExistingParty as alloy_sol_types::SolError>::SIGNATURE,
+            <IndicesAlreadyReserved as alloy_sol_types::SolError>::SIGNATURE,
             <ECDSAInvalidSignatureS as alloy_sol_types::SolError>::SIGNATURE,
             <NotEnoughIndices as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlUnauthorizedAccount as alloy_sol_types::SolError>::SIGNATURE,
@@ -6675,7 +7064,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     impl alloy_sol_types::SolInterface for StoffelInputManagerErrors {
         const NAME: &'static str = "StoffelInputManagerErrors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 9usize;
+        const COUNT: usize = 11usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -6696,6 +7085,12 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 }
                 Self::IndexNotReserved(_) => {
                     <IndexNotReserved as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::IndicesAlreadyReserved(_) => {
+                    <IndicesAlreadyReserved as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::NoIndicesReserved(_) => {
+                    <NoIndicesReserved as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::NotAnExistingParty(_) => {
                     <NotAnExistingParty as alloy_sol_types::SolError>::SELECTOR
@@ -6748,6 +7143,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     AccessControlBadConfirmation
                 },
                 {
+                    fn NoIndicesReserved(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <NoIndicesReserved as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::NoIndicesReserved)
+                    }
+                    NoIndicesReserved
+                },
+                {
                     fn NotAnExistingParty(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
@@ -6757,6 +7163,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerErrors::NotAnExistingParty)
                     }
                     NotAnExistingParty
+                },
+                {
+                    fn IndicesAlreadyReserved(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <IndicesAlreadyReserved as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::IndicesAlreadyReserved)
+                    }
+                    IndicesAlreadyReserved
                 },
                 {
                     fn ECDSAInvalidSignatureS(
@@ -6869,6 +7286,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     AccessControlBadConfirmation
                 },
                 {
+                    fn NoIndicesReserved(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <NoIndicesReserved as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::NoIndicesReserved)
+                    }
+                    NoIndicesReserved
+                },
+                {
                     fn NotAnExistingParty(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
@@ -6878,6 +7306,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerErrors::NotAnExistingParty)
                     }
                     NotAnExistingParty
+                },
+                {
+                    fn IndicesAlreadyReserved(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <IndicesAlreadyReserved as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::IndicesAlreadyReserved)
+                    }
+                    IndicesAlreadyReserved
                 },
                 {
                     fn ECDSAInvalidSignatureS(
@@ -6991,6 +7430,16 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                         inner,
                     )
                 }
+                Self::IndicesAlreadyReserved(inner) => {
+                    <IndicesAlreadyReserved as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::NoIndicesReserved(inner) => {
+                    <NoIndicesReserved as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::NotAnExistingParty(inner) => {
                     <NotAnExistingParty as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
@@ -7047,6 +7496,18 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                         out,
                     )
                 }
+                Self::IndicesAlreadyReserved(inner) => {
+                    <IndicesAlreadyReserved as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::NoIndicesReserved(inner) => {
+                    <NoIndicesReserved as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::NotAnExistingParty(inner) => {
                     <NotAnExistingParty as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
@@ -7099,9 +7560,10 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                35u8, 211u8, 105u8, 88u8, 60u8, 226u8, 48u8, 35u8, 161u8, 202u8, 75u8,
-                175u8, 20u8, 164u8, 134u8, 147u8, 163u8, 238u8, 155u8, 58u8, 191u8, 36u8,
-                131u8, 228u8, 29u8, 99u8, 158u8, 87u8, 203u8, 31u8, 157u8, 171u8,
+                30u8, 20u8, 171u8, 229u8, 208u8, 205u8, 185u8, 106u8, 221u8, 231u8,
+                185u8, 236u8, 169u8, 177u8, 75u8, 192u8, 141u8, 246u8, 35u8, 181u8,
+                128u8, 90u8, 253u8, 229u8, 163u8, 240u8, 172u8, 173u8, 194u8, 191u8,
+                79u8, 91u8,
             ],
             [
                 47u8, 135u8, 136u8, 17u8, 126u8, 126u8, 255u8, 29u8, 130u8, 233u8, 38u8,
@@ -7109,14 +7571,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 64u8, 48u8, 69u8, 64u8, 167u8, 51u8, 101u8, 111u8, 13u8,
             ],
             [
+                64u8, 112u8, 9u8, 32u8, 5u8, 32u8, 249u8, 241u8, 5u8, 132u8, 129u8, 60u8,
+                11u8, 149u8, 68u8, 26u8, 179u8, 32u8, 246u8, 176u8, 141u8, 151u8, 235u8,
+                218u8, 175u8, 30u8, 130u8, 78u8, 237u8, 217u8, 215u8, 195u8,
+            ],
+            [
                 162u8, 223u8, 120u8, 48u8, 224u8, 190u8, 222u8, 247u8, 177u8, 17u8,
                 107u8, 245u8, 71u8, 180u8, 103u8, 177u8, 107u8, 80u8, 179u8, 189u8, 35u8,
                 20u8, 108u8, 158u8, 9u8, 152u8, 120u8, 209u8, 78u8, 137u8, 48u8, 26u8,
-            ],
-            [
-                171u8, 222u8, 22u8, 183u8, 169u8, 25u8, 44u8, 49u8, 198u8, 35u8, 27u8,
-                21u8, 57u8, 186u8, 214u8, 254u8, 215u8, 118u8, 53u8, 222u8, 76u8, 0u8,
-                135u8, 24u8, 219u8, 220u8, 175u8, 183u8, 184u8, 54u8, 58u8, 254u8,
             ],
             [
                 184u8, 154u8, 221u8, 217u8, 55u8, 244u8, 79u8, 144u8, 44u8, 132u8, 149u8,
@@ -7141,10 +7603,10 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         ];
         /// The names of the variants in the same order as `SELECTORS`.
         pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(ClientAuthenticated),
-            ::core::stringify!(RoleGranted),
-            ::core::stringify!(InitializeStoffelAccessControl),
             ::core::stringify!(ReservedInputEvent),
+            ::core::stringify!(RoleGranted),
+            ::core::stringify!(ClientAuthenticated),
+            ::core::stringify!(InitializeStoffelAccessControl),
             ::core::stringify!(MaskedInputEvent),
             ::core::stringify!(RoleAdminChanged),
             ::core::stringify!(RoleRevoked),
@@ -7152,10 +7614,10 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         ];
         /// The signatures in the same order as `SELECTORS`.
         pub const SIGNATURES: &'static [&'static str] = &[
-            <ClientAuthenticated as alloy_sol_types::SolEvent>::SIGNATURE,
-            <RoleGranted as alloy_sol_types::SolEvent>::SIGNATURE,
-            <InitializeStoffelAccessControl as alloy_sol_types::SolEvent>::SIGNATURE,
             <ReservedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
+            <RoleGranted as alloy_sol_types::SolEvent>::SIGNATURE,
+            <ClientAuthenticated as alloy_sol_types::SolEvent>::SIGNATURE,
+            <InitializeStoffelAccessControl as alloy_sol_types::SolEvent>::SIGNATURE,
             <MaskedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
             <RoleAdminChanged as alloy_sol_types::SolEvent>::SIGNATURE,
             <RoleRevoked as alloy_sol_types::SolEvent>::SIGNATURE,
@@ -7504,13 +7966,11 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`authenticateClient`] function.
         pub fn authenticateClient(
             &self,
-            nonce: alloy::sol_types::private::primitives::aliases::U256,
             clientAddr: alloy::sol_types::private::Address,
             signature: alloy::sol_types::private::Bytes,
         ) -> alloy_contract::SolCallBuilder<&P, authenticateClientCall, N> {
             self.call_builder(
                 &authenticateClientCall {
-                    nonce,
                     clientAddr,
                     signature,
                 },
@@ -7521,6 +7981,10 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<&P, availableInputMasksCall, N> {
             self.call_builder(&availableInputMasksCall)
+        }
+        ///Creates a new call builder for the [`baseNonce`] function.
+        pub fn baseNonce(&self) -> alloy_contract::SolCallBuilder<&P, baseNonceCall, N> {
+            self.call_builder(&baseNonceCall)
         }
         ///Creates a new call builder for the [`getRoleAdmin`] function.
         pub fn getRoleAdmin(
@@ -7615,10 +8079,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn resetInputManager(
             &self,
             nIndicesToReserve: alloy::sol_types::private::primitives::aliases::U256,
+            t: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, resetInputManagerCall, N> {
             self.call_builder(
                 &resetInputManagerCall {
                     nIndicesToReserve,
+                    t,
                 },
             )
         }

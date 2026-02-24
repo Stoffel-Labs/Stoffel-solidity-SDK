@@ -10,7 +10,7 @@ interface IStoffelCoordinator {
     event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
     event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
 
-    function authenticateClient(uint256 nonce, address clientAddr, bytes memory signature) external returns (bool);
+    function authenticateClient(address clientAddr, bytes memory signature) external;
     function availableInputMasks() external view returns (uint256);
     function getRoleAdmin(bytes32 role) external view returns (bytes32);
     function grantRole(bytes32 role, address account) external;
@@ -32,11 +32,6 @@ interface IStoffelCoordinator {
     "name": "authenticateClient",
     "inputs": [
       {
-        "name": "nonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "clientAddr",
         "type": "address",
         "internalType": "address"
@@ -47,13 +42,7 @@ interface IStoffelCoordinator {
         "internalType": "bytes"
       }
     ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
+    "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
@@ -928,29 +917,22 @@ event RoleRevoked(bytes32 indexed role, address indexed account, address indexed
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `authenticateClient(uint256,address,bytes)` and selector `0xf9d8ff15`.
+    /**Function with signature `authenticateClient(address,bytes)` and selector `0x1ee4ee0f`.
 ```solidity
-function authenticateClient(uint256 nonce, address clientAddr, bytes memory signature) external returns (bool);
+function authenticateClient(address clientAddr, bytes memory signature) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct authenticateClientCall {
         #[allow(missing_docs)]
-        pub nonce: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub clientAddr: alloy::sol_types::private::Address,
         #[allow(missing_docs)]
         pub signature: alloy::sol_types::private::Bytes,
     }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`authenticateClient(uint256,address,bytes)`](authenticateClientCall) function.
+    ///Container type for the return parameters of the [`authenticateClient(address,bytes)`](authenticateClientCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct authenticateClientReturn {
-        #[allow(missing_docs)]
-        pub _0: bool,
-    }
+    pub struct authenticateClientReturn {}
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -963,13 +945,11 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             #[doc(hidden)]
             #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
             );
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
                 alloy::sol_types::private::Address,
                 alloy::sol_types::private::Bytes,
             );
@@ -989,7 +969,7 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             impl ::core::convert::From<authenticateClientCall>
             for UnderlyingRustTuple<'_> {
                 fn from(value: authenticateClientCall) -> Self {
-                    (value.nonce, value.clientAddr, value.signature)
+                    (value.clientAddr, value.signature)
                 }
             }
             #[automatically_derived]
@@ -998,9 +978,8 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             for authenticateClientCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {
-                        nonce: tuple.0,
-                        clientAddr: tuple.1,
-                        signature: tuple.2,
+                        clientAddr: tuple.0,
+                        signature: tuple.1,
                     }
                 }
             }
@@ -1008,9 +987,9 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
         {
             #[doc(hidden)]
             #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type UnderlyingSolTuple<'a> = ();
             #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (bool,);
+            type UnderlyingRustTuple<'a> = ();
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
             fn _type_assertion(
@@ -1027,7 +1006,7 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             impl ::core::convert::From<authenticateClientReturn>
             for UnderlyingRustTuple<'_> {
                 fn from(value: authenticateClientReturn) -> Self {
-                    (value._0,)
+                    ()
                 }
             }
             #[automatically_derived]
@@ -1035,27 +1014,33 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
             for authenticateClientReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
+                    Self {}
                 }
+            }
+        }
+        impl authenticateClientReturn {
+            fn _tokenize(
+                &self,
+            ) -> <authenticateClientCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
             }
         }
         #[automatically_derived]
         impl alloy_sol_types::SolCall for authenticateClientCall {
             type Parameters<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
                 alloy::sol_types::sol_data::Address,
                 alloy::sol_types::sol_data::Bytes,
             );
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type Return = authenticateClientReturn;
+            type ReturnTuple<'a> = ();
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "authenticateClient(uint256,address,bytes)";
-            const SELECTOR: [u8; 4] = [249u8, 216u8, 255u8, 21u8];
+            const SIGNATURE: &'static str = "authenticateClient(address,bytes)";
+            const SELECTOR: [u8; 4] = [30u8, 228u8, 238u8, 15u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -1065,9 +1050,6 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
                 (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.nonce),
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         &self.clientAddr,
                     ),
@@ -1078,21 +1060,14 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
             }
             #[inline]
             fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
+                authenticateClientReturn::_tokenize(ret)
             }
             #[inline]
             fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
                 <Self::ReturnTuple<
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: authenticateClientReturn = r.into();
-                        r._0
-                    })
+                    .map(Into::into)
             }
             #[inline]
             fn abi_decode_returns_validate(
@@ -1101,10 +1076,7 @@ function authenticateClient(uint256 nonce, address clientAddr, bytes memory sign
                 <Self::ReturnTuple<
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: authenticateClientReturn = r.into();
-                        r._0
-                    })
+                    .map(Into::into)
             }
         }
     };
@@ -2744,6 +2716,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [1u8, 255u8, 201u8, 167u8],
             [11u8, 218u8, 129u8, 207u8],
+            [30u8, 228u8, 238u8, 15u8],
             [35u8, 40u8, 189u8, 18u8],
             [36u8, 138u8, 156u8, 163u8],
             [47u8, 47u8, 241u8, 93u8],
@@ -2751,13 +2724,13 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             [145u8, 209u8, 72u8, 84u8],
             [213u8, 71u8, 116u8, 31u8],
             [235u8, 174u8, 53u8, 231u8],
-            [249u8, 216u8, 255u8, 21u8],
             [252u8, 120u8, 178u8, 232u8],
         ];
         /// The names of the variants in the same order as `SELECTORS`.
         pub const VARIANT_NAMES: &'static [&'static str] = &[
             ::core::stringify!(supportsInterface),
             ::core::stringify!(submitMaskedInput),
+            ::core::stringify!(authenticateClient),
             ::core::stringify!(availableInputMasks),
             ::core::stringify!(getRoleAdmin),
             ::core::stringify!(grantRole),
@@ -2765,13 +2738,13 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             ::core::stringify!(hasRole),
             ::core::stringify!(revokeRole),
             ::core::stringify!(obtainInputMasks),
-            ::core::stringify!(authenticateClient),
             ::core::stringify!(isParty),
         ];
         /// The signatures in the same order as `SELECTORS`.
         pub const SIGNATURES: &'static [&'static str] = &[
             <supportsInterfaceCall as alloy_sol_types::SolCall>::SIGNATURE,
             <submitMaskedInputCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <authenticateClientCall as alloy_sol_types::SolCall>::SIGNATURE,
             <availableInputMasksCall as alloy_sol_types::SolCall>::SIGNATURE,
             <getRoleAdminCall as alloy_sol_types::SolCall>::SIGNATURE,
             <grantRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
@@ -2779,7 +2752,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             <hasRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <revokeRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <obtainInputMasksCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <authenticateClientCall as alloy_sol_types::SolCall>::SIGNATURE,
             <isPartyCall as alloy_sol_types::SolCall>::SIGNATURE,
         ];
         /// Returns the signature for the given selector, if known.
@@ -2882,6 +2854,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     submitMaskedInput
                 },
                 {
+                    fn authenticateClient(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
+                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(IStoffelCoordinatorCalls::authenticateClient)
+                    }
+                    authenticateClient
+                },
+                {
                     fn availableInputMasks(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
@@ -2955,17 +2938,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     obtainInputMasks
                 },
                 {
-                    fn authenticateClient(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IStoffelCoordinatorCalls::authenticateClient)
-                    }
-                    authenticateClient
-                },
-                {
                     fn isParty(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
@@ -3015,6 +2987,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(IStoffelCoordinatorCalls::submitMaskedInput)
                     }
                     submitMaskedInput
+                },
+                {
+                    fn authenticateClient(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
+                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(IStoffelCoordinatorCalls::authenticateClient)
+                    }
+                    authenticateClient
                 },
                 {
                     fn availableInputMasks(
@@ -3092,17 +3075,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(IStoffelCoordinatorCalls::obtainInputMasks)
                     }
                     obtainInputMasks
-                },
-                {
-                    fn authenticateClient(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IStoffelCoordinatorCalls::authenticateClient)
-                    }
-                    authenticateClient
                 },
                 {
                     fn isParty(
@@ -3743,13 +3715,11 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`authenticateClient`] function.
         pub fn authenticateClient(
             &self,
-            nonce: alloy::sol_types::private::primitives::aliases::U256,
             clientAddr: alloy::sol_types::private::Address,
             signature: alloy::sol_types::private::Bytes,
         ) -> alloy_contract::SolCallBuilder<&P, authenticateClientCall, N> {
             self.call_builder(
                 &authenticateClientCall {
-                    nonce,
                     clientAddr,
                     signature,
                 },
