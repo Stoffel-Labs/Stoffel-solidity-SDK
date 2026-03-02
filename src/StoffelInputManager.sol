@@ -82,11 +82,11 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @dev Can only be called once by the designated party during preprocessing.
     ///      This determines how many clients can participate in the computation.
     function _resetInputManager(uint256 nIndicesToReserve, uint256 _t) internal {
+	baseNonce += nTotalIndices;
         nTotalIndices = nIndicesToReserve;
 	nNextIndex = 0;
 	nInputsSubmitted = 0;
 	t = _t;
-	// base nonce is NOT reset on purpose
 
 	for (uint256 i = 0; i < nTotalIndices; i++) {
 	    delete clientInputs[reservedInputIndices[i]];
