@@ -29,26 +29,6 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
         /// @notice Final phase where clients can retrieve their computation outputs
         Output
     }
-
-    /// @notice Structure for storing computation inputs
-    /// @dev Contains both public parameters and privacy-preserving masked inputs
-    struct Inputs {
-        /// @notice Public inputs visible to all parties
-        bytes publicInputs;
-        /// @notice Array of masked client inputs for privacy-preserving computation
-        MaskedInput[] maskedInputs;
-    }
-
-    /// @notice Structure for storing computation outputs
-    /// @dev Tracks public results and per-client share delivery status
-    struct Outputs {
-        /// @notice Public computation results
-        bytes publicOutputs;
-        /// @notice Mapping tracking which parties have sent shares to which clients
-        /// @dev Maps client address => party address => share received status
-        mapping(address => mapping(address => bool)) sharesReceived;
-    }
-
     /// @notice Emitted when the coordinator contract is initialized
     /// @param coordinator The address of this coordinator contract
     /// @param timeofInitialization The block timestamp when initialization occurred

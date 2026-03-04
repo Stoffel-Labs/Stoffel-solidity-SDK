@@ -12,10 +12,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 // Expects two clients to get an input.
 
 contract FakeCoordinator is StoffelCoordinator {
-    event OutputsPublished(bytes32 stoffelProgramHash, uint timeOfExecution);
-
-    Outputs outputs;
-
     constructor(bytes32 stoffelProgramHash, uint256 n, uint256 t, address designatedParty, address[] memory initialMPCNodes, uint256 nInputs) StoffelCoordinator(stoffelProgramHash, t, initialMPCNodes, nInputs) {
 	creationTime = block.timestamp;
 	creationBlock = block.number;
@@ -45,13 +41,5 @@ contract FakeCoordinator is StoffelCoordinator {
 
     function finalize() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.Output) goToRound(Round.Idle) {
         emit ExecutionDone(msg.sender, block.timestamp);
-    }
-
-    function setPublicOutputs(bytes calldata publicOutputs) external onlyRole(DESIGNATED_PARTY_ROLE) {
-	outputs.publicOutputs = publicOutputs;
-    }
-
-    function shareReceived(address from, address to) external onlyRole(PARTY_ROLE) {
-        outputs.sharesReceived[to][from] = true;
     }
 }

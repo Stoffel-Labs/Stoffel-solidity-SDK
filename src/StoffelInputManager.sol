@@ -13,6 +13,24 @@ import "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol
 ///      Clients reserve mask indices, obtain masks off-chain from MPC nodes, then submit
 ///      masked inputs on-chain. This ensures raw inputs are never exposed on the blockchain.
 abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputManager {
+    /// @notice Structure for storing computation inputs
+    /// @dev Contains both public parameters and privacy-preserving masked inputs
+    struct Inputs {
+        /// @notice Public inputs visible to all parties
+        bytes publicInputs;
+        /// @notice Array of masked client inputs for privacy-preserving computation
+        MaskedInput[] maskedInputs;
+    }
+
+    struct PerClientOutput {
+        bytes[] shares;
+	uint256 nShares;
+	mapping (address => bool) sharesReceived;
+    }
+
+    mapping (address => PerClientOutput) internal privateOutputs;
+    bytes internal publicOutputs;
+
     /// @notice Mapping from input mask index to the client who reserved it
     /// @dev Address(0) indicates the index is available for reservation
     mapping(uint256 => address) internal reservedInputIndices;
@@ -64,6 +82,10 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
     event ClientAuthenticated(address indexed client, bool success);
 
+    event EnoughPrivateOutputShares(address indexed client, bytes[] shares);
+
+    error AlreadyReceivedOutputShares(address client, address sender);
+
     error NotEnoughIndices(uint256 requested, uint256 available);
 
     error IndexNotReserved(address client, uint256 index);
@@ -91,6 +113,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 	for (uint256 i = 0; i < nTotalIndices; i++) {
 	    delete clientInputs[reservedInputIndices[i]];
 	    delete clientAuths[reservedInputIndices[i]];
+	    delete privateOutputs[reservedInputIndices[i]];	// TODO: does this clear the mapping inside the struct as well?
 	    reservedInputIndices[i] = address(0);
 	}
 
@@ -132,6 +155,19 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
 	nIndicesLeft -= nIndices;
 
+	_grantRole(CLIENT_ROLE, msg.sender);
+
+	PerClientOutput storage output = privateOutputs[msg.sender];
+	output.shares = new bytes[](4 * t + 1);	// TODO: is 4t+1 the correct n value?
+	output.nShares = 0;
+
+	// TODO: not sure if this is the best way, consider storing the relevant list of nodes elsewhere perhaps?
+        address[] memory parties = getRoleMembers(PARTY_ROLE);
+        uint256 nParties = getRoleMemberCount(PARTY_ROLE);
+        for (uint256 i = 0; i < nParties; i++) {
+	    output.sharesReceived[parties[i]] = false;
+        }
+
         emit ReservedInputEvent(msg.sender, indices);
 	return indices;
     }
@@ -147,7 +183,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @param reservedIndex The index that was previously reserved by this client
     /// @dev After submission, the index is unreserved to prevent mask reuse.
     ///      The mask must be obtained off-chain from MPC nodes before calling this.
-    function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external override {
+    function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external override onlyRole(CLIENT_ROLE) {
 	if (reservedInputIndices[reservedIndex] != msg.sender) {
             revert IndexNotReserved(msg.sender, reservedIndex);
 	}
@@ -168,6 +204,10 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         override
         onlyRole(PARTY_ROLE)
     {
+	if (!hasRole(CLIENT_ROLE, clientAddr)) {
+	    revert NotAClient(clientAddr);
+	}
+
 	// the nonce is the current base value plus the lowest reserved index
 	uint256 lowestReservedIndex = nTotalIndices;
 	for (uint256 i = 0; i < nTotalIndices; i++) {
@@ -195,6 +235,37 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 	    	success = true;
 	    }
             emit ClientAuthenticated(clientAddr, success);
+	}
+    }
+
+    function sendPublicOutputs(bytes calldata _publicOutputs) external onlyRole(DESIGNATED_PARTY_ROLE) {
+	publicOutputs = _publicOutputs;
+    }
+
+    function sendPrivateOutputShares(address client, bytes calldata shares) external onlyRole(PARTY_ROLE) {
+	if (!hasRole(CLIENT_ROLE, client)) {
+            revert NotAClient(client);
+	}
+
+        uint256 nShares = privateOutputs[client].nShares;
+
+	if (privateOutputs[client].sharesReceived[msg.sender]) {
+            revert AlreadyReceivedOutputShares(client, msg.sender);
+	}
+	// more than n output share messages are never stored, since there are only n parties
+	require(nShares < 4 * t + 1, "BUG: ALREADY RECEIVED SHARES FROM N PARTIES, TOO MANY CLIENTS");	// TODO: is 4t+1 the correct n value here?
+
+	privateOutputs[client].sharesReceived[msg.sender] = true;
+	privateOutputs[client].shares[nShares] = shares;
+	privateOutputs[client].nShares += 1;
+	nShares += 1;
+
+	if (nShares >= 2 * threshold + 1) {
+	    bytes[] memory shares = new bytes[](nShares);
+	    for (uint256 i = 0; i < nShares; i++) {
+		shares[i] = privateOutputs[client].shares[i];
+	    }
+	    emit EnoughPrivateOutputShares(client, shares);
 	}
     }
 }

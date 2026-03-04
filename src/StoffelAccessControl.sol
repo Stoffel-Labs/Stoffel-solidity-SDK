@@ -20,6 +20,8 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     /// @dev The designated party can trigger round transitions and manage the MPC lifecycle
     bytes32 public constant DESIGNATED_PARTY_ROLE = keccak256("DESIGNATED_PARTY_ROLE");
 
+    bytes32 public constant CLIENT_ROLE = keccak256("CLIENT_ROLE");
+
     /// @notice Fault tolerance threshold
     /// @dev Number of faulty/malicious parties the system can tolerate
     uint256 internal threshold;
@@ -30,6 +32,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     /// @param initializer Address that deployed the contract
     event InitializeStoffelAccessControl(uint256 nParties, uint256 t, address initializer);
 
+    error NotAClient(address client);
     error NotEnoughMPCParties(uint256 current, uint256 required);
     error NotAnExistingParty(address account);
 
@@ -59,6 +62,11 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         uint256 nParties = getRoleMemberCount(PARTY_ROLE);
         for (uint256 i = 0; i < nParties; i++) {
 	    _revokeRole(PARTY_ROLE, parties[i]);
+        }
+        address[] memory clients = getRoleMembers(CLIENT_ROLE);
+        uint256 nClients = getRoleMemberCount(CLIENT_ROLE);
+        for (uint256 i = 0; i < nClients; i++) {
+	    _revokeRole(CLIENT_ROLE, clients[i]);
         }
 
 	// grant new roles
