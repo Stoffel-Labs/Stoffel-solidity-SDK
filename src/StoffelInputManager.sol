@@ -224,17 +224,17 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         bytes32 hashedMsg = MessageHashUtils.toEthSignedMessageHash(keccak256(abi.encode(nonce)));
         address clientAddress = ECDSA.recover(hashedMsg, signature);
 
-	++clientAuths[clientAddr][0];
         if (clientAddress == clientAddr) {
 	    ++clientAuths[clientAddr][1];
+	} else {
+	    ++clientAuths[clientAddr][0];
 	}
 
-	if (clientAuths[clientAddr][0] == 2 * t + 1) {
-            bool success = false;
-	    if (clientAuths[clientAddr][1] >= t + 1) {
-	    	success = true;
-	    }
-            emit ClientAuthenticated(clientAddr, success);
+	require(clientAuths[clientAddr][0] < t + 1 || clientAuths[clientAddr][1] < t + 1, "BUG: the authentication votes by honest clients are inconsistent");
+	if (clientAuths[clientAddr][0] >= t + 1) {
+            emit ClientAuthenticated(clientAddr, false);
+	} else if (clientAuths[clientAddr][1] >= t + 1) {
+            emit ClientAuthenticated(clientAddr, true);
 	}
     }
 
