@@ -22,20 +22,26 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         MaskedInput[] maskedInputs;
     }
 
+    /// Structure for storing an output destined for a specific client.
     struct PerClientOutput {
+        /// The output shares encrypted under the client's key.
         bytes[] shares;
+	/// The number of shares so far received from nodes.
 	uint256 nShares;
+	/// Mapping to track which parties have sent their shares for this client.
 	mapping (address => bool) sharesReceived;
     }
 
+    /// Encrypted output shares per client for private per-client outputs.
     mapping (address => PerClientOutput) internal privateOutputs;
+    /// Public outputs.
     bytes internal publicOutputs;
 
     /// @notice Mapping from input mask index to the client who reserved it
     /// @dev Address(0) indicates the index is available for reservation
     mapping(uint256 => address) internal reservedInputIndices;
 
-    // first value is total number of auths, second is successful auths
+    // first value is number negative auths, second is number of positive auths
     mapping(address => uint256[2]) internal clientAuths;
 
     /// @notice Total number of input mask indices available
@@ -48,8 +54,14 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
     uint256 internal nInputsSubmitted;
 
+    /// Currently, each mask index is authenticated separately with a signature.
+    /// Each signature signs a nonce. The nonce signed by the signature for index i is
+    /// `baseNonce + i`.
+    /// After an instance has been executed, i.e., upon reset, the base nonce is incremented by the
+    /// total number of indices to enforce the nonce's uniqueness.
     uint256 public baseNonce;
 
+    /// The threshold value. Used for authentication.
     uint256 internal t;
 
     /// @notice Structure representing a client's masked input
@@ -86,6 +98,12 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
     error AlreadyReceivedOutputShares(address client, address sender);
 
+    error AlreadySubmittedInputs(address client);
+
+    error ZeroMaskedInput(address client);
+
+    error ZeroIndices(address client);
+
     error NotEnoughIndices(uint256 requested, uint256 available);
 
     error IndexNotReserved(address client, uint256 index);
@@ -101,23 +119,29 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
     /// @notice Initializes the input mask buffer with a specified number of indices
     /// @param nIndicesToReserve Number of input mask indices to make available
-    /// @dev Can only be called once by the designated party during preprocessing.
-    ///      This determines how many clients can participate in the computation.
+    /// @param _t The threshold value
     function _resetInputManager(uint256 nIndicesToReserve, uint256 _t) internal {
 	baseNonce += nTotalIndices;
-        nTotalIndices = nIndicesToReserve;
+	nTotalIndices = nIndicesToReserve;
 	nNextIndex = 0;
 	nInputsSubmitted = 0;
 	t = _t;
 
+        address[] memory parties = getRoleMembers(PARTY_ROLE);
+        uint256 nParties = getRoleMemberCount(PARTY_ROLE);
+
 	for (uint256 i = 0; i < nTotalIndices; i++) {
 	    delete clientInputs[reservedInputIndices[i]];
 	    delete clientAuths[reservedInputIndices[i]];
-	    delete privateOutputs[reservedInputIndices[i]];	// TODO: does this clear the mapping inside the struct as well?
-	    reservedInputIndices[i] = address(0);
+
+       	    for (uint256 i = 0; i < nParties; i++) {
+            	delete privateOutputs[reservedInputIndices[i]].sharesReceived[parties[i]];
+       	    }
+	    delete privateOutputs[reservedInputIndices[i]];
+	    delete reservedInputIndices[i];
 	}
 
-        emit IndexBufferEvent(nTotalIndices, msg.sender);
+	emit IndexBufferEvent(nTotalIndices, msg.sender);
     }
 
     function resetInputManager(uint256 nIndicesToReserve, uint256 t) external onlyRole(DESIGNATED_PARTY_ROLE) {
@@ -130,6 +154,10 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     ///      input mask from MPC nodes and submit their masked input.
     function obtainInputMasks(uint256 nIndices) external override returns (uint256[] memory) {
 	require(nIndices == 1, "CURRENTLY ONLY ONE INDEX PER CLIENT ALLOWED");
+
+	if (nIndices == 0) {
+	    revert ZeroIndices(msg.sender);
+	}
 
 	uint256 nIndicesLeft = nTotalIndices - nNextIndex; 
 
@@ -153,12 +181,10 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
             indices[nNextIndex - firstIndex] = nNextIndex;
 	}
 
-	nIndicesLeft -= nIndices;
-
 	_grantRole(CLIENT_ROLE, msg.sender);
 
 	PerClientOutput storage output = privateOutputs[msg.sender];
-	output.shares = new bytes[](4 * t + 1);	// TODO: is 4t+1 the correct n value?
+	output.shares = new bytes[](3 * t + 1);
 	output.nShares = 0;
 
 	// TODO: not sure if this is the best way, consider storing the relevant list of nodes elsewhere perhaps?
@@ -186,6 +212,14 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external override onlyRole(CLIENT_ROLE) {
 	if (reservedInputIndices[reservedIndex] != msg.sender) {
             revert IndexNotReserved(msg.sender, reservedIndex);
+	}
+
+	if (maskedInput == 0) {
+	    revert ZeroMaskedInput(msg.sender);
+	}
+
+	if (clientInputs[msg.sender].maskedInput != 0) {
+	    revert AlreadySubmittedInputs(msg.sender);
 	}
 
         clientInputs[msg.sender] = MaskedInput(reservedIndex, maskedInput);
@@ -253,7 +287,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
             revert AlreadyReceivedOutputShares(client, msg.sender);
 	}
 	// more than n output share messages are never stored, since there are only n parties
-	require(nShares < 4 * t + 1, "BUG: ALREADY RECEIVED SHARES FROM N PARTIES, TOO MANY CLIENTS");	// TODO: is 4t+1 the correct n value here?
+	require(nShares < 3 * t + 1, "BUG: ALREADY RECEIVED SHARES FROM N PARTIES, TOO MANY CLIENTS");
 
 	privateOutputs[client].sharesReceived[msg.sender] = true;
 	privateOutputs[client].shares[nShares] = shares;

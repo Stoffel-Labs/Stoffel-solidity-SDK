@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
 import "./StoffelAccessControl.sol";
@@ -7,18 +8,9 @@ import "./interfaces/IStoffelAccessControl.sol";
 import "./interfaces/IStoffelInputManager.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-// TODO: perhaps better to make nextRound switch to the next round after the body of the function, not before
-
-// Expects two clients to get an input.
-
+/// A minimal coordinator for testing.
 contract FakeCoordinator is StoffelCoordinator {
-    constructor(bytes32 stoffelProgramHash, uint256 n, uint256 t, address designatedParty, address[] memory initialMPCNodes, uint256 nInputs) StoffelCoordinator(stoffelProgramHash, t, initialMPCNodes, nInputs) {
-	creationTime = block.timestamp;
-	creationBlock = block.number;
-	emit CoordinatorInitialized(address(this), creationTime, creationBlock, msg.sender);
-    }
-
-    // make nodes do the preprocessing
+    constructor(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMPCNodes, uint256 nInputs) StoffelCoordinator(stoffelProgramHash, t, initialMPCNodes, nInputs) { }
     function startPreprocessing() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.Idle) nextRound {
         emit PreprocessingStarted(msg.sender, block.timestamp);
     }
@@ -35,11 +27,11 @@ contract FakeCoordinator is StoffelCoordinator {
         emit MPCStarted(msg.sender, block.timestamp);
     }
 
-    function sendOutputs() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.MPC) nextRound {
+    function sendOutputs() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.MPCExecution) nextRound {
 	emit OutputSendingStarted(msg.sender, block.timestamp);
     }
 
-    function finalize() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.Output) goToRound(Round.Idle) {
+    function finalize() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.OutputDistribution) nextRound {
         emit ExecutionDone(msg.sender, block.timestamp);
     }
 }

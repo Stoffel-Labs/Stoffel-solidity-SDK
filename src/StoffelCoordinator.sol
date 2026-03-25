@@ -10,13 +10,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @title StoffelCoordinator
 /// @author Stoffel Labs
 /// @notice Abstract contract for coordinating Multi-Party Computation (MPC) workflows on-chain
-/// @dev Implements a 7-phase round-based state machine for MPC coordination.
+/// @dev Implements a round-based state machine for MPC coordination.
 ///      Inherits access control for party management and input management for client submissions.
 ///      Concrete implementations must override the four abstract lifecycle methods.
 abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManager, Ownable {
     /// @notice Enum representing the phases of the MPC computation lifecycle
-    /// @dev Rounds progress sequentially from PreprocessingRound to ClientOutputCollectionRound
+    /// @dev Rounds progress sequentially from Idle to Output
     enum Round {
+	/// @notice Initial state before any MPC activity has begun
         Idle,
         /// @notice Initial phase where MPC nodes generate preprocessing material (input masks)
         Preprocessing,
@@ -25,9 +26,11 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
         /// @notice Phase where clients submit their masked inputs
         InputCollection,
         /// @notice Phase where off-chain MPC computation is executed by nodes
-        MPC,
-        /// @notice Final phase where clients can retrieve their computation outputs
-        Output
+        MPCExecution,
+        /// @notice Phase where clients can retrieve their computation outputs
+        OutputDistribution,
+	/// @notice Final state
+	ProgramFinished
     }
     /// @notice Emitted when the coordinator contract is initialized
     /// @param coordinator The address of this coordinator contract
@@ -52,8 +55,14 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @param timeOfExecution The block timestamp when execution was initiated
     event MPCStarted(address executor, uint256 timeOfExecution);
 
+    /// @notice Emitted when the output distribution phase is initiated
+    /// @param executor The address that initiated the execution
+    /// @param timeOfExecution The block timestamp when execution was initiated
     event OutputSendingStarted(address executor, uint256 timeOfExecution);
 
+    /// @notice Emitted when the workflow is finished
+    /// @param executor The address that initiated the execution
+    /// @param timeOfExecution The block timestamp when execution was initiated
     event ExecutionDone(address executor, uint256 timeOfExecution);
 
     error NotAtRound(Round required, Round current);
@@ -207,8 +216,10 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @notice Publishes the results of the MPC computation
     /// @dev Called after MPC nodes complete the off-chain computation.
     ///      Public outputs are stored on-chain while private shares are sent
-    ///      directly to clients. The Outputs struct tracks share delivery status.
+    ///      directly to clients.
     function sendOutputs() external virtual;
 
+    /// @notice Finalizes the program execution.
+    /// @dev Called at the very end for clean-up, for example.
     function finalize() external virtual;
 }

@@ -20,6 +20,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     /// @dev The designated party can trigger round transitions and manage the MPC lifecycle
     bytes32 public constant DESIGNATED_PARTY_ROLE = keccak256("DESIGNATED_PARTY_ROLE");
 
+    /// @notice Role identifier for clients
     bytes32 public constant CLIENT_ROLE = keccak256("CLIENT_ROLE");
 
     /// @notice Fault tolerance threshold

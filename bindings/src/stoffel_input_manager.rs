@@ -6,6 +6,7 @@ interface StoffelInputManager {
     error AccessControlBadConfirmation();
     error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
     error AlreadyReceivedOutputShares(address client, address sender);
+    error AlreadySubmittedInputs(address client);
     error ECDSAInvalidSignature();
     error ECDSAInvalidSignatureLength(uint256 length);
     error ECDSAInvalidSignatureS(bytes32 s);
@@ -16,6 +17,8 @@ interface StoffelInputManager {
     error NotAnExistingParty(address account);
     error NotEnoughIndices(uint256 requested, uint256 available);
     error NotEnoughMPCParties(uint256 current, uint256 required);
+    error ZeroIndices(address client);
+    error ZeroMaskedInput(address client);
 
     event ClientAuthenticated(address indexed client, bool success);
     event EnoughPrivateOutputShares(address indexed client, bytes[] shares);
@@ -713,6 +716,17 @@ interface StoffelInputManager {
   },
   {
     "type": "error",
+    "name": "AlreadySubmittedInputs",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ECDSAInvalidSignature",
     "inputs": []
   },
@@ -827,6 +841,28 @@ interface StoffelInputManager {
         "name": "required",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ZeroIndices",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ZeroMaskedInput",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   }
@@ -1120,6 +1156,87 @@ error AlreadyReceivedOutputShares(address client, address sender);
                     ),
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         &self.sender,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `AlreadySubmittedInputs(address)` and selector `0x4f5fbfc3`.
+```solidity
+error AlreadySubmittedInputs(address client);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct AlreadySubmittedInputs {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<AlreadySubmittedInputs> for UnderlyingRustTuple<'_> {
+            fn from(value: AlreadySubmittedInputs) -> Self {
+                (value.client,)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for AlreadySubmittedInputs {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { client: tuple.0 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for AlreadySubmittedInputs {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "AlreadySubmittedInputs(address)";
+            const SELECTOR: [u8; 4] = [79u8, 95u8, 191u8, 195u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.client,
                     ),
                 )
             }
@@ -1970,6 +2087,168 @@ error NotEnoughMPCParties(uint256 current, uint256 required);
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.required),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `ZeroIndices(address)` and selector `0xb2fd5518`.
+```solidity
+error ZeroIndices(address client);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct ZeroIndices {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<ZeroIndices> for UnderlyingRustTuple<'_> {
+            fn from(value: ZeroIndices) -> Self {
+                (value.client,)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for ZeroIndices {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { client: tuple.0 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for ZeroIndices {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "ZeroIndices(address)";
+            const SELECTOR: [u8; 4] = [178u8, 253u8, 85u8, 24u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.client,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `ZeroMaskedInput(address)` and selector `0x16923cea`.
+```solidity
+error ZeroMaskedInput(address client);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct ZeroMaskedInput {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<ZeroMaskedInput> for UnderlyingRustTuple<'_> {
+            fn from(value: ZeroMaskedInput) -> Self {
+                (value.client,)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for ZeroMaskedInput {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { client: tuple.0 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for ZeroMaskedInput {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "ZeroMaskedInput(address)";
+            const SELECTOR: [u8; 4] = [22u8, 146u8, 60u8, 234u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.client,
+                    ),
                 )
             }
             #[inline]
@@ -7952,6 +8231,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         AlreadyReceivedOutputShares(AlreadyReceivedOutputShares),
         #[allow(missing_docs)]
+        AlreadySubmittedInputs(AlreadySubmittedInputs),
+        #[allow(missing_docs)]
         ECDSAInvalidSignature(ECDSAInvalidSignature),
         #[allow(missing_docs)]
         ECDSAInvalidSignatureLength(ECDSAInvalidSignatureLength),
@@ -7971,6 +8252,10 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         NotEnoughIndices(NotEnoughIndices),
         #[allow(missing_docs)]
         NotEnoughMPCParties(NotEnoughMPCParties),
+        #[allow(missing_docs)]
+        ZeroIndices(ZeroIndices),
+        #[allow(missing_docs)]
+        ZeroMaskedInput(ZeroMaskedInput),
     }
     impl StoffelInputManagerErrors {
         /// All the selectors of this enum.
@@ -7981,12 +8266,15 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [8u8, 229u8, 84u8, 149u8],
+            [22u8, 146u8, 60u8, 234u8],
             [58u8, 35u8, 98u8, 104u8],
+            [79u8, 95u8, 191u8, 195u8],
             [102u8, 151u8, 178u8, 50u8],
             [111u8, 175u8, 159u8, 5u8],
             [160u8, 50u8, 172u8, 107u8],
             [171u8, 220u8, 224u8, 106u8],
             [172u8, 169u8, 47u8, 9u8],
+            [178u8, 253u8, 85u8, 24u8],
             [215u8, 139u8, 206u8, 12u8],
             [223u8, 61u8, 117u8, 226u8],
             [226u8, 81u8, 125u8, 63u8],
@@ -7997,12 +8285,15 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// The names of the variants in the same order as `SELECTORS`.
         pub const VARIANT_NAMES: &'static [&'static str] = &[
             ::core::stringify!(AlreadyReceivedOutputShares),
+            ::core::stringify!(ZeroMaskedInput),
             ::core::stringify!(NotEnoughMPCParties),
+            ::core::stringify!(AlreadySubmittedInputs),
             ::core::stringify!(AccessControlBadConfirmation),
             ::core::stringify!(NoIndicesReserved),
             ::core::stringify!(NotAClient),
             ::core::stringify!(NotAnExistingParty),
             ::core::stringify!(IndicesAlreadyReserved),
+            ::core::stringify!(ZeroIndices),
             ::core::stringify!(ECDSAInvalidSignatureS),
             ::core::stringify!(NotEnoughIndices),
             ::core::stringify!(AccessControlUnauthorizedAccount),
@@ -8013,12 +8304,15 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// The signatures in the same order as `SELECTORS`.
         pub const SIGNATURES: &'static [&'static str] = &[
             <AlreadyReceivedOutputShares as alloy_sol_types::SolError>::SIGNATURE,
+            <ZeroMaskedInput as alloy_sol_types::SolError>::SIGNATURE,
             <NotEnoughMPCParties as alloy_sol_types::SolError>::SIGNATURE,
+            <AlreadySubmittedInputs as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlBadConfirmation as alloy_sol_types::SolError>::SIGNATURE,
             <NoIndicesReserved as alloy_sol_types::SolError>::SIGNATURE,
             <NotAClient as alloy_sol_types::SolError>::SIGNATURE,
             <NotAnExistingParty as alloy_sol_types::SolError>::SIGNATURE,
             <IndicesAlreadyReserved as alloy_sol_types::SolError>::SIGNATURE,
+            <ZeroIndices as alloy_sol_types::SolError>::SIGNATURE,
             <ECDSAInvalidSignatureS as alloy_sol_types::SolError>::SIGNATURE,
             <NotEnoughIndices as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlUnauthorizedAccount as alloy_sol_types::SolError>::SIGNATURE,
@@ -8051,7 +8345,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     impl alloy_sol_types::SolInterface for StoffelInputManagerErrors {
         const NAME: &'static str = "StoffelInputManagerErrors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 13usize;
+        const COUNT: usize = 16usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -8063,6 +8357,9 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 }
                 Self::AlreadyReceivedOutputShares(_) => {
                     <AlreadyReceivedOutputShares as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::AlreadySubmittedInputs(_) => {
+                    <AlreadySubmittedInputs as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::ECDSAInvalidSignature(_) => {
                     <ECDSAInvalidSignature as alloy_sol_types::SolError>::SELECTOR
@@ -8093,6 +8390,12 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 }
                 Self::NotEnoughMPCParties(_) => {
                     <NotEnoughMPCParties as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::ZeroIndices(_) => {
+                    <ZeroIndices as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::ZeroMaskedInput(_) => {
+                    <ZeroMaskedInput as alloy_sol_types::SolError>::SELECTOR
                 }
             }
         }
@@ -8125,6 +8428,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     AlreadyReceivedOutputShares
                 },
                 {
+                    fn ZeroMaskedInput(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <ZeroMaskedInput as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::ZeroMaskedInput)
+                    }
+                    ZeroMaskedInput
+                },
+                {
                     fn NotEnoughMPCParties(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
@@ -8134,6 +8448,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerErrors::NotEnoughMPCParties)
                     }
                     NotEnoughMPCParties
+                },
+                {
+                    fn AlreadySubmittedInputs(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <AlreadySubmittedInputs as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::AlreadySubmittedInputs)
+                    }
+                    AlreadySubmittedInputs
                 },
                 {
                     fn AccessControlBadConfirmation(
@@ -8187,6 +8512,15 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerErrors::IndicesAlreadyReserved)
                     }
                     IndicesAlreadyReserved
+                },
+                {
+                    fn ZeroIndices(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <ZeroIndices as alloy_sol_types::SolError>::abi_decode_raw(data)
+                            .map(StoffelInputManagerErrors::ZeroIndices)
+                    }
+                    ZeroIndices
                 },
                 {
                     fn ECDSAInvalidSignatureS(
@@ -8288,6 +8622,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     AlreadyReceivedOutputShares
                 },
                 {
+                    fn ZeroMaskedInput(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <ZeroMaskedInput as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::ZeroMaskedInput)
+                    }
+                    ZeroMaskedInput
+                },
+                {
                     fn NotEnoughMPCParties(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
@@ -8297,6 +8642,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerErrors::NotEnoughMPCParties)
                     }
                     NotEnoughMPCParties
+                },
+                {
+                    fn AlreadySubmittedInputs(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <AlreadySubmittedInputs as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::AlreadySubmittedInputs)
+                    }
+                    AlreadySubmittedInputs
                 },
                 {
                     fn AccessControlBadConfirmation(
@@ -8352,6 +8708,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerErrors::IndicesAlreadyReserved)
                     }
                     IndicesAlreadyReserved
+                },
+                {
+                    fn ZeroIndices(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <ZeroIndices as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::ZeroIndices)
+                    }
+                    ZeroIndices
                 },
                 {
                     fn ECDSAInvalidSignatureS(
@@ -8450,6 +8817,11 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                         inner,
                     )
                 }
+                Self::AlreadySubmittedInputs(inner) => {
+                    <AlreadySubmittedInputs as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::ECDSAInvalidSignature(inner) => {
                     <ECDSAInvalidSignature as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
@@ -8498,6 +8870,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                         inner,
                     )
                 }
+                Self::ZeroIndices(inner) => {
+                    <ZeroIndices as alloy_sol_types::SolError>::abi_encoded_size(inner)
+                }
+                Self::ZeroMaskedInput(inner) => {
+                    <ZeroMaskedInput as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
             }
         }
         #[inline]
@@ -8517,6 +8897,12 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 }
                 Self::AlreadyReceivedOutputShares(inner) => {
                     <AlreadyReceivedOutputShares as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::AlreadySubmittedInputs(inner) => {
+                    <AlreadySubmittedInputs as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -8574,6 +8960,18 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 }
                 Self::NotEnoughMPCParties(inner) => {
                     <NotEnoughMPCParties as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::ZeroIndices(inner) => {
+                    <ZeroIndices as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::ZeroMaskedInput(inner) => {
+                    <ZeroMaskedInput as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
