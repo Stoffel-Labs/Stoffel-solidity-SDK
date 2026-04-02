@@ -67,15 +67,15 @@ interface StoffelCoordinator {
     function renounceOwnership() external;
     function renounceRole(bytes32 role, address account) external;
     function reserveInputMasks() external;
-    function resetAccessControl(uint256 t, address[] memory initialMPCNodes) external;
-    function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMPCNodes, uint256 nInputs) external;
+    function resetAccessControl(uint256 t, address[] memory initialMpcNodes) external;
+    function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMpcNodes, uint256 nInputs) external;
     function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
     function revokeRole(bytes32 role, address account) external;
     function round() external view returns (Round);
     function sendOutputs() external;
     function sendPrivateOutputShares(address client, bytes memory shares) external;
     function sendPublicOutputs(bytes memory _publicOutputs) external;
-    function startMPC() external;
+    function startMpc() external;
     function startPreprocessing() external;
     function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
@@ -457,7 +457,7 @@ interface StoffelCoordinator {
         "internalType": "uint256"
       },
       {
-        "name": "initialMPCNodes",
+        "name": "initialMpcNodes",
         "type": "address[]",
         "internalType": "address[]"
       }
@@ -480,7 +480,7 @@ interface StoffelCoordinator {
         "internalType": "uint256"
       },
       {
-        "name": "initialMPCNodes",
+        "name": "initialMpcNodes",
         "type": "address[]",
         "internalType": "address[]"
       },
@@ -582,7 +582,7 @@ interface StoffelCoordinator {
   },
   {
     "type": "function",
-    "name": "startMPC",
+    "name": "startMpc",
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
@@ -8731,7 +8731,7 @@ function reserveInputMasks() external;
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `resetAccessControl(uint256,address[])` and selector `0xaf206f28`.
 ```solidity
-function resetAccessControl(uint256 t, address[] memory initialMPCNodes) external;
+function resetAccessControl(uint256 t, address[] memory initialMpcNodes) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -8739,7 +8739,7 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
         #[allow(missing_docs)]
         pub t: alloy::sol_types::private::primitives::aliases::U256,
         #[allow(missing_docs)]
-        pub initialMPCNodes: alloy::sol_types::private::Vec<
+        pub initialMpcNodes: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
     }
@@ -8783,7 +8783,7 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
             impl ::core::convert::From<resetAccessControlCall>
             for UnderlyingRustTuple<'_> {
                 fn from(value: resetAccessControlCall) -> Self {
-                    (value.t, value.initialMPCNodes)
+                    (value.t, value.initialMpcNodes)
                 }
             }
             #[automatically_derived]
@@ -8793,7 +8793,7 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {
                         t: tuple.0,
-                        initialMPCNodes: tuple.1,
+                        initialMpcNodes: tuple.1,
                     }
                 }
             }
@@ -8869,7 +8869,7 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
                     > as alloy_sol_types::SolType>::tokenize(&self.t),
                     <alloy::sol_types::sol_data::Array<
                         alloy::sol_types::sol_data::Address,
-                    > as alloy_sol_types::SolType>::tokenize(&self.initialMPCNodes),
+                    > as alloy_sol_types::SolType>::tokenize(&self.initialMpcNodes),
                 )
             }
             #[inline]
@@ -8898,7 +8898,7 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `resetCoordinator(bytes32,uint256,address[],uint256)` and selector `0xf6603c61`.
 ```solidity
-function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMPCNodes, uint256 nInputs) external;
+function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMpcNodes, uint256 nInputs) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -8908,7 +8908,7 @@ function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memor
         #[allow(missing_docs)]
         pub t: alloy::sol_types::private::primitives::aliases::U256,
         #[allow(missing_docs)]
-        pub initialMPCNodes: alloy::sol_types::private::Vec<
+        pub initialMpcNodes: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
         #[allow(missing_docs)]
@@ -8961,7 +8961,7 @@ function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memor
                     (
                         value.stoffelProgramHash,
                         value.t,
-                        value.initialMPCNodes,
+                        value.initialMpcNodes,
                         value.nInputs,
                     )
                 }
@@ -8974,7 +8974,7 @@ function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memor
                     Self {
                         stoffelProgramHash: tuple.0,
                         t: tuple.1,
-                        initialMPCNodes: tuple.2,
+                        initialMpcNodes: tuple.2,
                         nInputs: tuple.3,
                     }
                 }
@@ -9056,7 +9056,7 @@ function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memor
                     > as alloy_sol_types::SolType>::tokenize(&self.t),
                     <alloy::sol_types::sol_data::Array<
                         alloy::sol_types::sol_data::Address,
-                    > as alloy_sol_types::SolType>::tokenize(&self.initialMPCNodes),
+                    > as alloy_sol_types::SolType>::tokenize(&self.initialMpcNodes),
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.nInputs),
@@ -10007,17 +10007,17 @@ function sendPublicOutputs(bytes memory _publicOutputs) external;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `startMPC()` and selector `0x595f806e`.
+    /**Function with signature `startMpc()` and selector `0x33cc9a09`.
 ```solidity
-function startMPC() external;
+function startMpc() external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct startMPCCall;
-    ///Container type for the return parameters of the [`startMPC()`](startMPCCall) function.
+    pub struct startMpcCall;
+    ///Container type for the return parameters of the [`startMpc()`](startMpcCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct startMPCReturn {}
+    pub struct startMpcReturn {}
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -10045,14 +10045,14 @@ function startMPC() external;
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<startMPCCall> for UnderlyingRustTuple<'_> {
-                fn from(value: startMPCCall) -> Self {
+            impl ::core::convert::From<startMpcCall> for UnderlyingRustTuple<'_> {
+                fn from(value: startMpcCall) -> Self {
                     ()
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for startMPCCall {
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for startMpcCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self
                 }
@@ -10077,39 +10077,39 @@ function startMPC() external;
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<startMPCReturn> for UnderlyingRustTuple<'_> {
-                fn from(value: startMPCReturn) -> Self {
+            impl ::core::convert::From<startMpcReturn> for UnderlyingRustTuple<'_> {
+                fn from(value: startMpcReturn) -> Self {
                     ()
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for startMPCReturn {
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for startMpcReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {}
                 }
             }
         }
-        impl startMPCReturn {
+        impl startMpcReturn {
             fn _tokenize(
                 &self,
-            ) -> <startMPCCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+            ) -> <startMpcCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
                 ()
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolCall for startMPCCall {
+        impl alloy_sol_types::SolCall for startMpcCall {
             type Parameters<'a> = ();
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = startMPCReturn;
+            type Return = startMpcReturn;
             type ReturnTuple<'a> = ();
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "startMPC()";
-            const SELECTOR: [u8; 4] = [89u8, 95u8, 128u8, 110u8];
+            const SIGNATURE: &'static str = "startMpc()";
+            const SELECTOR: [u8; 4] = [51u8, 204u8, 154u8, 9u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -10122,7 +10122,7 @@ function startMPC() external;
             }
             #[inline]
             fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                startMPCReturn::_tokenize(ret)
+                startMpcReturn::_tokenize(ret)
             }
             #[inline]
             fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
@@ -10822,7 +10822,7 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         sendPublicOutputs(sendPublicOutputsCall),
         #[allow(missing_docs)]
-        startMPC(startMPCCall),
+        startMpc(startMpcCall),
         #[allow(missing_docs)]
         startPreprocessing(startPreprocessingCall),
         #[allow(missing_docs)]
@@ -10852,11 +10852,11 @@ function transferOwnership(address newOwner) external;
             [36u8, 138u8, 156u8, 163u8],
             [47u8, 47u8, 241u8, 93u8],
             [48u8, 16u8, 76u8, 62u8],
+            [51u8, 204u8, 154u8, 9u8],
             [54u8, 86u8, 138u8, 190u8],
             [59u8, 67u8, 56u8, 209u8],
             [75u8, 142u8, 100u8, 136u8],
             [75u8, 178u8, 120u8, 243u8],
-            [89u8, 95u8, 128u8, 110u8],
             [113u8, 80u8, 24u8, 166u8],
             [127u8, 53u8, 181u8, 96u8],
             [141u8, 165u8, 203u8, 91u8],
@@ -10892,11 +10892,11 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(getRoleAdmin),
             ::core::stringify!(grantRole),
             ::core::stringify!(PARTY_ROLE),
+            ::core::stringify!(startMpc),
             ::core::stringify!(renounceRole),
             ::core::stringify!(resetInputManager),
             ::core::stringify!(sendOutputs),
             ::core::stringify!(finalize),
-            ::core::stringify!(startMPC),
             ::core::stringify!(renounceOwnership),
             ::core::stringify!(DESIGNATED_PARTY_ROLE),
             ::core::stringify!(owner),
@@ -10932,11 +10932,11 @@ function transferOwnership(address newOwner) external;
             <getRoleAdminCall as alloy_sol_types::SolCall>::SIGNATURE,
             <grantRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <PARTY_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
+            <startMpcCall as alloy_sol_types::SolCall>::SIGNATURE,
             <renounceRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <resetInputManagerCall as alloy_sol_types::SolCall>::SIGNATURE,
             <sendOutputsCall as alloy_sol_types::SolCall>::SIGNATURE,
             <finalizeCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <startMPCCall as alloy_sol_types::SolCall>::SIGNATURE,
             <renounceOwnershipCall as alloy_sol_types::SolCall>::SIGNATURE,
             <DESIGNATED_PARTY_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
             <ownerCall as alloy_sol_types::SolCall>::SIGNATURE,
@@ -11073,7 +11073,7 @@ function transferOwnership(address newOwner) external;
                 Self::sendPublicOutputs(_) => {
                     <sendPublicOutputsCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::startMPC(_) => <startMPCCall as alloy_sol_types::SolCall>::SELECTOR,
+                Self::startMpc(_) => <startMpcCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::startPreprocessing(_) => {
                     <startPreprocessingCall as alloy_sol_types::SolCall>::SELECTOR
                 }
@@ -11232,6 +11232,15 @@ function transferOwnership(address newOwner) external;
                     PARTY_ROLE
                 },
                 {
+                    fn startMpc(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
+                        <startMpcCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
+                            .map(StoffelCoordinatorCalls::startMpc)
+                    }
+                    startMpc
+                },
+                {
                     fn renounceRole(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
@@ -11272,15 +11281,6 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorCalls::finalize)
                     }
                     finalize
-                },
-                {
-                    fn startMPC(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
-                        <startMPCCall as alloy_sol_types::SolCall>::abi_decode_raw(data)
-                            .map(StoffelCoordinatorCalls::startMPC)
-                    }
-                    startMPC
                 },
                 {
                     fn renounceOwnership(
@@ -11649,6 +11649,17 @@ function transferOwnership(address newOwner) external;
                     PARTY_ROLE
                 },
                 {
+                    fn startMpc(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
+                        <startMpcCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelCoordinatorCalls::startMpc)
+                    }
+                    startMpc
+                },
+                {
                     fn renounceRole(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
@@ -11691,17 +11702,6 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorCalls::finalize)
                     }
                     finalize
-                },
-                {
-                    fn startMPC(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
-                        <startMPCCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelCoordinatorCalls::startMPC)
-                    }
-                    startMPC
                 },
                 {
                     fn renounceOwnership(
@@ -12079,8 +12079,8 @@ function transferOwnership(address newOwner) external;
                         inner,
                     )
                 }
-                Self::startMPC(inner) => {
-                    <startMPCCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
+                Self::startMpc(inner) => {
+                    <startMpcCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
                 Self::startPreprocessing(inner) => {
                     <startPreprocessingCall as alloy_sol_types::SolCall>::abi_encoded_size(
@@ -12287,8 +12287,8 @@ function transferOwnership(address newOwner) external;
                         out,
                     )
                 }
-                Self::startMPC(inner) => {
-                    <startMPCCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::startMpc(inner) => {
+                    <startMpcCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -13987,14 +13987,14 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn resetAccessControl(
             &self,
             t: alloy::sol_types::private::primitives::aliases::U256,
-            initialMPCNodes: alloy::sol_types::private::Vec<
+            initialMpcNodes: alloy::sol_types::private::Vec<
                 alloy::sol_types::private::Address,
             >,
         ) -> alloy_contract::SolCallBuilder<&P, resetAccessControlCall, N> {
             self.call_builder(
                 &resetAccessControlCall {
                     t,
-                    initialMPCNodes,
+                    initialMpcNodes,
                 },
             )
         }
@@ -14003,7 +14003,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
             stoffelProgramHash: alloy::sol_types::private::FixedBytes<32>,
             t: alloy::sol_types::private::primitives::aliases::U256,
-            initialMPCNodes: alloy::sol_types::private::Vec<
+            initialMpcNodes: alloy::sol_types::private::Vec<
                 alloy::sol_types::private::Address,
             >,
             nInputs: alloy::sol_types::private::primitives::aliases::U256,
@@ -14012,7 +14012,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 &resetCoordinatorCall {
                     stoffelProgramHash,
                     t,
-                    initialMPCNodes,
+                    initialMpcNodes,
                     nInputs,
                 },
             )
@@ -14072,9 +14072,9 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 },
             )
         }
-        ///Creates a new call builder for the [`startMPC`] function.
-        pub fn startMPC(&self) -> alloy_contract::SolCallBuilder<&P, startMPCCall, N> {
-            self.call_builder(&startMPCCall)
+        ///Creates a new call builder for the [`startMpc`] function.
+        pub fn startMpc(&self) -> alloy_contract::SolCallBuilder<&P, startMpcCall, N> {
+            self.call_builder(&startMpcCall)
         }
         ///Creates a new call builder for the [`startPreprocessing`] function.
         pub fn startPreprocessing(

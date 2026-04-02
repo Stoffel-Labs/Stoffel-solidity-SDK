@@ -37,27 +37,27 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     error NotEnoughMPCParties(uint256 current, uint256 required);
     error NotAnExistingParty(address account);
 
-    constructor (uint256 t, address[] memory initialMPCNodes) {
-        _resetAccessControl(t, initialMPCNodes);
+    constructor (uint256 t, address[] memory initialMpcNodes) {
+        _resetAccessControl(t, initialMpcNodes);
     }
 
     /// @notice Initializes the access control with party count and threshold
     /// @param t Fault tolerance threshold
     /// @dev Emits InitializeStoffelAccessControl event on deployment
-    function _resetAccessControl(uint256 t, address[] memory initialMPCNodes) internal {
+    function _resetAccessControl(uint256 t, address[] memory initialMpcNodes) internal {
         uint256 n = 3 * t + 1;
 
-        if (initialMPCNodes.length < n) {
-	    revert NotEnoughMPCParties(initialMPCNodes.length, n);
+        if (initialMpcNodes.length < n) {
+	    revert NotEnoughMPCParties(initialMpcNodes.length, n);
 	}
 
         threshold = t;
 
 	// revoke all existing roles
-        address[] memory designated_parties = getRoleMembers(DESIGNATED_PARTY_ROLE);
+        address[] memory designatedParties = getRoleMembers(DESIGNATED_PARTY_ROLE);
         uint256 nDesignatedParties = getRoleMemberCount(DESIGNATED_PARTY_ROLE);
         for (uint256 i = 0; i < nDesignatedParties; i++) {
-	    _revokeRole(DESIGNATED_PARTY_ROLE, designated_parties[i]);
+	    _revokeRole(DESIGNATED_PARTY_ROLE, designatedParties[i]);
         }
         address[] memory parties = getRoleMembers(PARTY_ROLE);
         uint256 nParties = getRoleMemberCount(PARTY_ROLE);
@@ -71,16 +71,16 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         }
 
 	// grant new roles
-        for (uint256 i = 0; i < initialMPCNodes.length; i++) {
-            _grantRole(PARTY_ROLE, initialMPCNodes[i]);
+        for (uint256 i = 0; i < initialMpcNodes.length; i++) {
+            _grantRole(PARTY_ROLE, initialMpcNodes[i]);
         }
-        _grantRole(DESIGNATED_PARTY_ROLE, initialMPCNodes[0]);
+        _grantRole(DESIGNATED_PARTY_ROLE, initialMpcNodes[0]);
 
         emit InitializeStoffelAccessControl(n, t, msg.sender);
     }
 
-    function resetAccessControl(uint256 t, address[] memory initialMPCNodes) external onlyRole(DESIGNATED_PARTY_ROLE) {
-	_resetAccessControl(t, initialMPCNodes);
+    function resetAccessControl(uint256 t, address[] memory initialMpcNodes) external onlyRole(DESIGNATED_PARTY_ROLE) {
+	_resetAccessControl(t, initialMpcNodes);
     }
 
     /// @notice Checks if the contract supports a given interface

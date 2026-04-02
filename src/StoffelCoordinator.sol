@@ -43,11 +43,14 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @param timeOfExecution The block timestamp when preprocessing was executed
     event PreprocessingStarted(address designatedParty, uint256 timeOfExecution);
 
-    /// @notice Emitted when input mask reservation phase begins
+    /// @notice Emitted when the input mask reservation phase begins
     /// @param executor The address that triggered the reservation phase
     /// @param timeOfExecution The block timestamp when the phase began
     event InputMaskReservationStarted(address executor, uint256 timeOfExecution);
 
+    /// @notice Emitted when the input collection phase begins
+    /// @param executor The address that triggered the reservation phase
+    /// @param timeOfExecution The block timestamp when the phase began
     event InputCollectionStarted(address executor, uint256 timeOfExecution);
 
     /// @notice Emitted when the MPC task execution is initiated
@@ -161,8 +164,8 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
         _timedRoundTransitionGoTo(transitionRound, gotoRound, whenToTransition);
     }
 
-    constructor (bytes32 stoffelProgramHash, uint256 t, address[] memory initialMPCNodes, uint256 nInputs) StoffelAccessControl(t, initialMPCNodes) StoffelInputManager(nInputs, t) Ownable(msg.sender) {
-        _resetCoordinator(stoffelProgramHash, initialMPCNodes[0]);
+    constructor (bytes32 stoffelProgramHash, uint256 t, address[] memory initialMpcNodes, uint256 nInputs) StoffelAccessControl(t, initialMpcNodes) StoffelInputManager(nInputs, t) Ownable(msg.sender) {
+        _resetCoordinator(stoffelProgramHash, initialMpcNodes[0]);
     }
 
     /// @notice Initializes the MPC coordinator with parties and program configuration
@@ -185,12 +188,12 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     function resetCoordinator(
         bytes32 stoffelProgramHash,
         uint256 t,
-        address[] memory initialMPCNodes,
+        address[] memory initialMpcNodes,
 	uint256 nInputs
     ) external onlyRole(DESIGNATED_PARTY_ROLE) {
-	super._resetAccessControl(t, initialMPCNodes);
+	super._resetAccessControl(t, initialMpcNodes);
 	super._resetInputManager(nInputs, t);
-	_resetCoordinator(stoffelProgramHash, initialMPCNodes[0]);
+	_resetCoordinator(stoffelProgramHash, initialMpcNodes[0]);
     }
 
     /// @notice Initiates the preprocessing phase of the MPC computation
@@ -211,7 +214,7 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @dev Called when sufficient inputs have been collected according to application logic.
     ///      MPC nodes listen for the associated event to begin computation.
     ///      Should use the atRound modifier for round enforcement.
-    function startMPC() external virtual;
+    function startMpc() external virtual;
 
     /// @notice Publishes the results of the MPC computation
     /// @dev Called after MPC nodes complete the off-chain computation.

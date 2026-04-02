@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// A minimal coordinator for testing.
 contract FakeCoordinator is StoffelCoordinator {
-    constructor(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMPCNodes, uint256 nInputs) StoffelCoordinator(stoffelProgramHash, t, initialMPCNodes, nInputs) { }
+    constructor(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMpcNodes, uint256 nInputs) StoffelCoordinator(stoffelProgramHash, t, initialMpcNodes, nInputs) { }
     function startPreprocessing() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.Idle) nextRound {
         emit PreprocessingStarted(msg.sender, block.timestamp);
     }
@@ -23,7 +23,7 @@ contract FakeCoordinator is StoffelCoordinator {
         emit InputCollectionStarted(msg.sender, block.timestamp);
     }
 
-    function startMPC() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.InputCollection) nextRound {
+    function startMpc() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.InputCollection) nextRound {
         emit MPCStarted(msg.sender, block.timestamp);
     }
 

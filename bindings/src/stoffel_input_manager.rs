@@ -47,7 +47,7 @@ interface StoffelInputManager {
     function isParty(address account) external view returns (bool);
     function obtainInputMasks(uint256 nIndices) external returns (uint256[] memory);
     function renounceRole(bytes32 role, address account) external;
-    function resetAccessControl(uint256 t, address[] memory initialMPCNodes) external;
+    function resetAccessControl(uint256 t, address[] memory initialMpcNodes) external;
     function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
     function revokeRole(bytes32 role, address account) external;
     function sendPrivateOutputShares(address client, bytes memory shares) external;
@@ -364,7 +364,7 @@ interface StoffelInputManager {
         "internalType": "uint256"
       },
       {
-        "name": "initialMPCNodes",
+        "name": "initialMpcNodes",
         "type": "address[]",
         "internalType": "address[]"
       }
@@ -6029,7 +6029,7 @@ function renounceRole(bytes32 role, address account) external;
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `resetAccessControl(uint256,address[])` and selector `0xaf206f28`.
 ```solidity
-function resetAccessControl(uint256 t, address[] memory initialMPCNodes) external;
+function resetAccessControl(uint256 t, address[] memory initialMpcNodes) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -6037,7 +6037,7 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
         #[allow(missing_docs)]
         pub t: alloy::sol_types::private::primitives::aliases::U256,
         #[allow(missing_docs)]
-        pub initialMPCNodes: alloy::sol_types::private::Vec<
+        pub initialMpcNodes: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
     }
@@ -6081,7 +6081,7 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
             impl ::core::convert::From<resetAccessControlCall>
             for UnderlyingRustTuple<'_> {
                 fn from(value: resetAccessControlCall) -> Self {
-                    (value.t, value.initialMPCNodes)
+                    (value.t, value.initialMpcNodes)
                 }
             }
             #[automatically_derived]
@@ -6091,7 +6091,7 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {
                         t: tuple.0,
-                        initialMPCNodes: tuple.1,
+                        initialMpcNodes: tuple.1,
                     }
                 }
             }
@@ -6167,7 +6167,7 @@ function resetAccessControl(uint256 t, address[] memory initialMPCNodes) externa
                     > as alloy_sol_types::SolType>::tokenize(&self.t),
                     <alloy::sol_types::sol_data::Array<
                         alloy::sol_types::sol_data::Address,
-                    > as alloy_sol_types::SolType>::tokenize(&self.initialMPCNodes),
+                    > as alloy_sol_types::SolType>::tokenize(&self.initialMpcNodes),
                 )
             }
             #[inline]
@@ -9544,14 +9544,14 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn resetAccessControl(
             &self,
             t: alloy::sol_types::private::primitives::aliases::U256,
-            initialMPCNodes: alloy::sol_types::private::Vec<
+            initialMpcNodes: alloy::sol_types::private::Vec<
                 alloy::sol_types::private::Address,
             >,
         ) -> alloy_contract::SolCallBuilder<&P, resetAccessControlCall, N> {
             self.call_builder(
                 &resetAccessControlCall {
                     t,
-                    initialMPCNodes,
+                    initialMpcNodes,
                 },
             )
         }

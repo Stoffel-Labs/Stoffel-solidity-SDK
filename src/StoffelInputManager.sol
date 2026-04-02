@@ -222,7 +222,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 	    revert AlreadySubmittedInputs(msg.sender);
 	}
 
-        clientInputs[msg.sender] = MaskedInput(reservedIndex, maskedInput);
+        clientInputs[msg.sender] = MaskedInput({ index: reservedIndex, maskedInput: maskedInput });
 
         emit MaskedInputEvent(msg.sender, maskedInput, reservedIndex);
 	nInputsSubmitted++;
@@ -265,6 +265,9 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 	}
 
 	require(clientAuths[clientAddr][0] < t + 1 || clientAuths[clientAddr][1] < t + 1, "BUG: the authentication votes by honest clients are inconsistent");
+
+	/// We wait for t+1 calls with the same verification result to be sure that at
+	/// least one of them has been made by an honest party.
 	if (clientAuths[clientAddr][0] >= t + 1) {
             emit ClientAuthenticated(clientAddr, false);
 	} else if (clientAuths[clientAddr][1] >= t + 1) {
@@ -276,6 +279,9 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 	publicOutputs = _publicOutputs;
     }
 
+    /// @notice Given encrypted shares and a client address, store the shares to be retrieved by the client at a later point.
+    /// The coordinator waits until enough shares for reconstruction are available and decryption and reconstruction is up to the
+    /// client.
     function sendPrivateOutputShares(address client, bytes calldata shares) external onlyRole(PARTY_ROLE) {
 	if (!hasRole(CLIENT_ROLE, client)) {
             revert NotAClient(client);
