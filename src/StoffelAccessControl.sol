@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
-import "./interfaces/IStoffelAccessControl.sol";
+import { IAccessControl, AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import {IStoffelAccessControl } from "./interfaces/IStoffelAccessControl.sol";
 
 /// @title StoffelAccessControl
 /// @author Stoffel Labs

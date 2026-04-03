@@ -7,10 +7,10 @@ pragma solidity ^0.8.13;
 /// @dev Defines the functions for input mask reservation, submission,
 ///      and client authentication in MPC computations.
 interface IStoffelInputManager {
-    /// @notice Reserves input mask indices for the calling client
-    /// @param nIndices The number of indices to reserve
+    /// @notice Reserves an input mask index for the calling client
+    /// @param i The index to be reserved
     /// @dev Must be called before obtaining the mask from MPC nodes
-    function obtainInputMasks(uint256 nIndices) external returns (uint256[] memory);
+    function reserveMaskIndex(uint256 i) external;
 
     /// @notice Returns the number of input mask indices still available
     /// @return Number of unreserved indices

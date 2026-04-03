@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./StoffelAccessControl.sol";
-import "./StoffelInputManager.sol";
-import "./interfaces/IStoffelAccessControl.sol";
-import "./interfaces/IStoffelInputManager.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { StoffelAccessControl } from "./StoffelAccessControl.sol";
+import { StoffelInputManager } from "./StoffelInputManager.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title StoffelCoordinator
 /// @author Stoffel Labs

@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "./StoffelAccessControl.sol";
-import "./StoffelInputManager.sol";
-import "./StoffelCoordinator.sol";
-import "./interfaces/IStoffelAccessControl.sol";
-import "./interfaces/IStoffelInputManager.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { StoffelCoordinator } from "./StoffelCoordinator.sol";
 
 /// A minimal coordinator for testing.
 contract FakeCoordinator is StoffelCoordinator {

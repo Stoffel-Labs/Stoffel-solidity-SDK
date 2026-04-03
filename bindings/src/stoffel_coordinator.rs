@@ -9,20 +9,20 @@ interface StoffelCoordinator {
     error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
     error AlreadyReceivedOutputShares(address client, address sender);
     error AlreadySubmittedInputs(address client);
+    error ClientAlreadyReservedIndex(address client, uint256 i);
     error ECDSAInvalidSignature();
     error ECDSAInvalidSignatureLength(uint256 length);
     error ECDSAInvalidSignatureS(bytes32 s);
+    error IndexAlreadyReserved(uint256 i, address reqClient, address resClient);
     error IndexNotReserved(address client, uint256 index);
-    error IndicesAlreadyReserved(address client);
     error NoIndicesReserved(address client);
     error NotAClient(address client);
     error NotAnExistingParty(address account);
     error NotAtRound(Round required, Round current);
-    error NotEnoughIndices(uint256 requested, uint256 available);
     error NotEnoughMPCParties(uint256 current, uint256 required);
+    error OutOfIndices(address client);
     error OwnableInvalidOwner(address owner);
     error OwnableUnauthorizedAccount(address account);
-    error ZeroIndices(address client);
     error ZeroMaskedInput(address client);
 
     event ClientAuthenticated(address indexed client, bool success);
@@ -38,7 +38,7 @@ interface StoffelCoordinator {
     event OutputSendingStarted(address executor, uint256 timeOfExecution);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event PreprocessingStarted(address designatedParty, uint256 timeOfExecution);
-    event ReservedInputEvent(address client, uint256[] reservedIndices);
+    event ReservedInputEvent(address client, uint256 reservedIndex);
     event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole);
     event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
     event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
@@ -62,14 +62,14 @@ interface StoffelCoordinator {
     function hasRole(bytes32 role, address account) external view returns (bool);
     function isDesignatedParty(address account) external view returns (bool);
     function isParty(address account) external view returns (bool);
-    function obtainInputMasks(uint256 nIndices) external returns (uint256[] memory);
     function owner() external view returns (address);
     function renounceOwnership() external;
     function renounceRole(bytes32 role, address account) external;
     function reserveInputMasks() external;
+    function reserveMaskIndex(uint256 i) external;
     function resetAccessControl(uint256 t, address[] memory initialMpcNodes) external;
     function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMpcNodes, uint256 nInputs) external;
-    function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
+    function resetInputManager(uint256 nIndicesToReserve, uint256 _t) external;
     function revokeRole(bytes32 role, address account) external;
     function round() external view returns (Round);
     function sendOutputs() external;
@@ -385,25 +385,6 @@ interface StoffelCoordinator {
   },
   {
     "type": "function",
-    "name": "obtainInputMasks",
-    "inputs": [
-      {
-        "name": "nIndices",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -444,6 +425,19 @@ interface StoffelCoordinator {
     "type": "function",
     "name": "reserveInputMasks",
     "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "reserveMaskIndex",
+    "inputs": [
+      {
+        "name": "i",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -503,7 +497,7 @@ interface StoffelCoordinator {
         "internalType": "uint256"
       },
       {
-        "name": "t",
+        "name": "_t",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -926,10 +920,10 @@ interface StoffelCoordinator {
         "internalType": "address"
       },
       {
-        "name": "reservedIndices",
-        "type": "uint256[]",
+        "name": "reservedIndex",
+        "type": "uint256",
         "indexed": false,
-        "internalType": "uint256[]"
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1059,6 +1053,22 @@ interface StoffelCoordinator {
   },
   {
     "type": "error",
+    "name": "ClientAlreadyReservedIndex",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "i",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ECDSAInvalidSignature",
     "inputs": []
   },
@@ -1086,6 +1096,27 @@ interface StoffelCoordinator {
   },
   {
     "type": "error",
+    "name": "IndexAlreadyReserved",
+    "inputs": [
+      {
+        "name": "i",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "reqClient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "resClient",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "IndexNotReserved",
     "inputs": [
       {
@@ -1097,17 +1128,6 @@ interface StoffelCoordinator {
         "name": "index",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "IndicesAlreadyReserved",
-    "inputs": [
-      {
-        "name": "client",
-        "type": "address",
-        "internalType": "address"
       }
     ]
   },
@@ -1162,22 +1182,6 @@ interface StoffelCoordinator {
   },
   {
     "type": "error",
-    "name": "NotEnoughIndices",
-    "inputs": [
-      {
-        "name": "requested",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "available",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "NotEnoughMPCParties",
     "inputs": [
       {
@@ -1189,6 +1193,17 @@ interface StoffelCoordinator {
         "name": "required",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "OutOfIndices",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },
@@ -1209,17 +1224,6 @@ interface StoffelCoordinator {
     "inputs": [
       {
         "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "ZeroIndices",
-    "inputs": [
-      {
-        "name": "client",
         "type": "address",
         "internalType": "address"
       }
@@ -1758,6 +1762,103 @@ error AlreadySubmittedInputs(address client);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `ClientAlreadyReservedIndex(address,uint256)` and selector `0xc315a0f5`.
+```solidity
+error ClientAlreadyReservedIndex(address client, uint256 i);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct ClientAlreadyReservedIndex {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub i: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = (
+            alloy::sol_types::sol_data::Address,
+            alloy::sol_types::sol_data::Uint<256>,
+        );
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (
+            alloy::sol_types::private::Address,
+            alloy::sol_types::private::primitives::aliases::U256,
+        );
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<ClientAlreadyReservedIndex>
+        for UnderlyingRustTuple<'_> {
+            fn from(value: ClientAlreadyReservedIndex) -> Self {
+                (value.client, value.i)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>>
+        for ClientAlreadyReservedIndex {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self {
+                    client: tuple.0,
+                    i: tuple.1,
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for ClientAlreadyReservedIndex {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "ClientAlreadyReservedIndex(address,uint256)";
+            const SELECTOR: [u8; 4] = [195u8, 21u8, 160u8, 245u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.client,
+                    ),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.i),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ECDSAInvalidSignature()` and selector `0xf645eedf`.
 ```solidity
 error ECDSAInvalidSignature();
@@ -1998,6 +2099,109 @@ error ECDSAInvalidSignatureS(bytes32 s);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `IndexAlreadyReserved(uint256,address,address)` and selector `0xa0b8c708`.
+```solidity
+error IndexAlreadyReserved(uint256 i, address reqClient, address resClient);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct IndexAlreadyReserved {
+        #[allow(missing_docs)]
+        pub i: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
+        pub reqClient: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub resClient: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = (
+            alloy::sol_types::sol_data::Uint<256>,
+            alloy::sol_types::sol_data::Address,
+            alloy::sol_types::sol_data::Address,
+        );
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (
+            alloy::sol_types::private::primitives::aliases::U256,
+            alloy::sol_types::private::Address,
+            alloy::sol_types::private::Address,
+        );
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<IndexAlreadyReserved> for UnderlyingRustTuple<'_> {
+            fn from(value: IndexAlreadyReserved) -> Self {
+                (value.i, value.reqClient, value.resClient)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for IndexAlreadyReserved {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self {
+                    i: tuple.0,
+                    reqClient: tuple.1,
+                    resClient: tuple.2,
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for IndexAlreadyReserved {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "IndexAlreadyReserved(uint256,address,address)";
+            const SELECTOR: [u8; 4] = [160u8, 184u8, 199u8, 8u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.i),
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.reqClient,
+                    ),
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.resClient,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `IndexNotReserved(address,uint256)` and selector `0xffabbae7`.
 ```solidity
 error IndexNotReserved(address client, uint256 index);
@@ -2080,87 +2284,6 @@ error IndexNotReserved(address client, uint256 index);
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.index),
-                )
-            }
-            #[inline]
-            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
-                <Self::Parameters<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Self::new)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Custom error with signature `IndicesAlreadyReserved(address)` and selector `0xaca92f09`.
-```solidity
-error IndicesAlreadyReserved(address client);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct IndicesAlreadyReserved {
-        #[allow(missing_docs)]
-        pub client: alloy::sol_types::private::Address,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        #[doc(hidden)]
-        #[allow(dead_code)]
-        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
-        #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
-        #[cfg(test)]
-        #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(
-            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-        ) {
-            match _t {
-                alloy_sol_types::private::AssertTypeEq::<
-                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                >(_) => {}
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<IndicesAlreadyReserved> for UnderlyingRustTuple<'_> {
-            fn from(value: IndicesAlreadyReserved) -> Self {
-                (value.client,)
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple<'_>> for IndicesAlreadyReserved {
-            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self { client: tuple.0 }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolError for IndicesAlreadyReserved {
-            type Parameters<'a> = UnderlyingSolTuple<'a>;
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "IndicesAlreadyReserved(address)";
-            const SELECTOR: [u8; 4] = [172u8, 169u8, 47u8, 9u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        &self.client,
-                    ),
                 )
             }
             #[inline]
@@ -2505,101 +2628,6 @@ error NotAtRound(Round required, Round current);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Custom error with signature `NotEnoughIndices(uint256,uint256)` and selector `0xdf3d75e2`.
-```solidity
-error NotEnoughIndices(uint256 requested, uint256 available);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct NotEnoughIndices {
-        #[allow(missing_docs)]
-        pub requested: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub available: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        #[doc(hidden)]
-        #[allow(dead_code)]
-        type UnderlyingSolTuple<'a> = (
-            alloy::sol_types::sol_data::Uint<256>,
-            alloy::sol_types::sol_data::Uint<256>,
-        );
-        #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = (
-            alloy::sol_types::private::primitives::aliases::U256,
-            alloy::sol_types::private::primitives::aliases::U256,
-        );
-        #[cfg(test)]
-        #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(
-            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-        ) {
-            match _t {
-                alloy_sol_types::private::AssertTypeEq::<
-                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                >(_) => {}
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<NotEnoughIndices> for UnderlyingRustTuple<'_> {
-            fn from(value: NotEnoughIndices) -> Self {
-                (value.requested, value.available)
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple<'_>> for NotEnoughIndices {
-            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self {
-                    requested: tuple.0,
-                    available: tuple.1,
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolError for NotEnoughIndices {
-            type Parameters<'a> = UnderlyingSolTuple<'a>;
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "NotEnoughIndices(uint256,uint256)";
-            const SELECTOR: [u8; 4] = [223u8, 61u8, 117u8, 226u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.requested),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.available),
-                )
-            }
-            #[inline]
-            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
-                <Self::Parameters<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Self::new)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `NotEnoughMPCParties(uint256,uint256)` and selector `0x3a236268`.
 ```solidity
 error NotEnoughMPCParties(uint256 current, uint256 required);
@@ -2682,6 +2710,87 @@ error NotEnoughMPCParties(uint256 current, uint256 required);
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.required),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `OutOfIndices(address)` and selector `0x4ae235f9`.
+```solidity
+error OutOfIndices(address client);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct OutOfIndices {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<OutOfIndices> for UnderlyingRustTuple<'_> {
+            fn from(value: OutOfIndices) -> Self {
+                (value.client,)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for OutOfIndices {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { client: tuple.0 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for OutOfIndices {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "OutOfIndices(address)";
+            const SELECTOR: [u8; 4] = [74u8, 226u8, 53u8, 249u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.client,
+                    ),
                 )
             }
             #[inline]
@@ -2845,87 +2954,6 @@ error OwnableUnauthorizedAccount(address account);
                 (
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         &self.account,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
-                <Self::Parameters<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Self::new)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Custom error with signature `ZeroIndices(address)` and selector `0xb2fd5518`.
-```solidity
-error ZeroIndices(address client);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct ZeroIndices {
-        #[allow(missing_docs)]
-        pub client: alloy::sol_types::private::Address,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        #[doc(hidden)]
-        #[allow(dead_code)]
-        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
-        #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
-        #[cfg(test)]
-        #[allow(dead_code, unreachable_patterns)]
-        fn _type_assertion(
-            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-        ) {
-            match _t {
-                alloy_sol_types::private::AssertTypeEq::<
-                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                >(_) => {}
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<ZeroIndices> for UnderlyingRustTuple<'_> {
-            fn from(value: ZeroIndices) -> Self {
-                (value.client,)
-            }
-        }
-        #[automatically_derived]
-        #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple<'_>> for ZeroIndices {
-            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self { client: tuple.0 }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolError for ZeroIndices {
-            type Parameters<'a> = UnderlyingSolTuple<'a>;
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "ZeroIndices(address)";
-            const SELECTOR: [u8; 4] = [178u8, 253u8, 85u8, 24u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        &self.client,
                     ),
                 )
             }
@@ -4570,9 +4598,9 @@ event PreprocessingStarted(address designatedParty, uint256 timeOfExecution);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Event with signature `ReservedInputEvent(address,uint256[])` and selector `0x1e14abe5d0cdb96adde7b9eca9b14bc08df623b5805afde5a3f0acadc2bf4f5b`.
+    /**Event with signature `ReservedInputEvent(address,uint256)` and selector `0xabde16b7a9192c31c6231b1539bad6fed77635de4c008718dbdcafb7b8363afe`.
 ```solidity
-event ReservedInputEvent(address client, uint256[] reservedIndices);
+event ReservedInputEvent(address client, uint256 reservedIndex);
 ```*/
     #[allow(
         non_camel_case_types,
@@ -4585,9 +4613,7 @@ event ReservedInputEvent(address client, uint256[] reservedIndices);
         #[allow(missing_docs)]
         pub client: alloy::sol_types::private::Address,
         #[allow(missing_docs)]
-        pub reservedIndices: alloy::sol_types::private::Vec<
-            alloy::sol_types::private::primitives::aliases::U256,
-        >,
+        pub reservedIndex: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
         non_camel_case_types,
@@ -4601,18 +4627,17 @@ event ReservedInputEvent(address client, uint256[] reservedIndices);
         impl alloy_sol_types::SolEvent for ReservedInputEvent {
             type DataTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
-                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
+                alloy::sol_types::sol_data::Uint<256>,
             );
             type DataToken<'a> = <Self::DataTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
-            const SIGNATURE: &'static str = "ReservedInputEvent(address,uint256[])";
+            const SIGNATURE: &'static str = "ReservedInputEvent(address,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                30u8, 20u8, 171u8, 229u8, 208u8, 205u8, 185u8, 106u8, 221u8, 231u8,
-                185u8, 236u8, 169u8, 177u8, 75u8, 192u8, 141u8, 246u8, 35u8, 181u8,
-                128u8, 90u8, 253u8, 229u8, 163u8, 240u8, 172u8, 173u8, 194u8, 191u8,
-                79u8, 91u8,
+                171u8, 222u8, 22u8, 183u8, 169u8, 25u8, 44u8, 49u8, 198u8, 35u8, 27u8,
+                21u8, 57u8, 186u8, 214u8, 254u8, 215u8, 118u8, 53u8, 222u8, 76u8, 0u8,
+                135u8, 24u8, 219u8, 220u8, 175u8, 183u8, 184u8, 54u8, 58u8, 254u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -4623,7 +4648,7 @@ event ReservedInputEvent(address client, uint256[] reservedIndices);
             ) -> Self {
                 Self {
                     client: data.0,
-                    reservedIndices: data.1,
+                    reservedIndex: data.1,
                 }
             }
             #[inline]
@@ -4647,9 +4672,9 @@ event ReservedInputEvent(address client, uint256[] reservedIndices);
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         &self.client,
                     ),
-                    <alloy::sol_types::sol_data::Array<
-                        alloy::sol_types::sol_data::Uint<256>,
-                    > as alloy_sol_types::SolType>::tokenize(&self.reservedIndices),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.reservedIndex),
                 )
             }
             #[inline]
@@ -7971,176 +7996,6 @@ function isParty(address account) external view returns (bool);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `obtainInputMasks(uint256)` and selector `0xebae35e7`.
-```solidity
-function obtainInputMasks(uint256 nIndices) external returns (uint256[] memory);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct obtainInputMasksCall {
-        #[allow(missing_docs)]
-        pub nIndices: alloy::sol_types::private::primitives::aliases::U256,
-    }
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`obtainInputMasks(uint256)`](obtainInputMasksCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct obtainInputMasksReturn {
-        #[allow(missing_docs)]
-        pub _0: alloy::sol_types::private::Vec<
-            alloy::sol_types::private::primitives::aliases::U256,
-        >,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<obtainInputMasksCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: obtainInputMasksCall) -> Self {
-                    (value.nIndices,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for obtainInputMasksCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { nIndices: tuple.0 }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
-            );
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::Vec<
-                    alloy::sol_types::private::primitives::aliases::U256,
-                >,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<obtainInputMasksReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: obtainInputMasksReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for obtainInputMasksReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for obtainInputMasksCall {
-            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = alloy::sol_types::private::Vec<
-                alloy::sol_types::private::primitives::aliases::U256,
-            >;
-            type ReturnTuple<'a> = (
-                alloy::sol_types::sol_data::Array<alloy::sol_types::sol_data::Uint<256>>,
-            );
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "obtainInputMasks(uint256)";
-            const SELECTOR: [u8; 4] = [235u8, 174u8, 53u8, 231u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.nIndices),
-                )
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Array<
-                        alloy::sol_types::sol_data::Uint<256>,
-                    > as alloy_sol_types::SolType>::tokenize(ret),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: obtainInputMasksReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: obtainInputMasksReturn = r.into();
-                        r._0
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `owner()` and selector `0x8da5cb5b`.
 ```solidity
 function owner() external view returns (address);
@@ -8729,6 +8584,156 @@ function reserveInputMasks() external;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `reserveMaskIndex(uint256)` and selector `0x21dc7b9b`.
+```solidity
+function reserveMaskIndex(uint256 i) external;
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct reserveMaskIndexCall {
+        #[allow(missing_docs)]
+        pub i: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    ///Container type for the return parameters of the [`reserveMaskIndex(uint256)`](reserveMaskIndexCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct reserveMaskIndexReturn {}
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            #[allow(dead_code)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<reserveMaskIndexCall>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: reserveMaskIndexCall) -> Self {
+                    (value.i,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for reserveMaskIndexCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { i: tuple.0 }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            #[allow(dead_code)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<reserveMaskIndexReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: reserveMaskIndexReturn) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for reserveMaskIndexReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {}
+                }
+            }
+        }
+        impl reserveMaskIndexReturn {
+            fn _tokenize(
+                &self,
+            ) -> <reserveMaskIndexCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+                ()
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for reserveMaskIndexCall {
+            type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = reserveMaskIndexReturn;
+            type ReturnTuple<'a> = ();
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "reserveMaskIndex(uint256)";
+            const SELECTOR: [u8; 4] = [33u8, 220u8, 123u8, 155u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.i),
+                )
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                reserveMaskIndexReturn::_tokenize(ret)
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(Into::into)
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Into::into)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `resetAccessControl(uint256,address[])` and selector `0xaf206f28`.
 ```solidity
 function resetAccessControl(uint256 t, address[] memory initialMpcNodes) external;
@@ -9088,7 +9093,7 @@ function resetCoordinator(bytes32 stoffelProgramHash, uint256 t, address[] memor
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `resetInputManager(uint256,uint256)` and selector `0x3b4338d1`.
 ```solidity
-function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
+function resetInputManager(uint256 nIndicesToReserve, uint256 _t) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -9096,7 +9101,7 @@ function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
         #[allow(missing_docs)]
         pub nIndicesToReserve: alloy::sol_types::private::primitives::aliases::U256,
         #[allow(missing_docs)]
-        pub t: alloy::sol_types::private::primitives::aliases::U256,
+        pub _t: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`resetInputManager(uint256,uint256)`](resetInputManagerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
@@ -9138,7 +9143,7 @@ function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
             impl ::core::convert::From<resetInputManagerCall>
             for UnderlyingRustTuple<'_> {
                 fn from(value: resetInputManagerCall) -> Self {
-                    (value.nIndicesToReserve, value.t)
+                    (value.nIndicesToReserve, value._t)
                 }
             }
             #[automatically_derived]
@@ -9148,7 +9153,7 @@ function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {
                         nIndicesToReserve: tuple.0,
-                        t: tuple.1,
+                        _t: tuple.1,
                     }
                 }
             }
@@ -9224,7 +9229,7 @@ function resetInputManager(uint256 nIndicesToReserve, uint256 t) external;
                     > as alloy_sol_types::SolType>::tokenize(&self.nIndicesToReserve),
                     <alloy::sol_types::sol_data::Uint<
                         256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.t),
+                    > as alloy_sol_types::SolType>::tokenize(&self._t),
                 )
             }
             #[inline]
@@ -10796,8 +10801,6 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         isParty(isPartyCall),
         #[allow(missing_docs)]
-        obtainInputMasks(obtainInputMasksCall),
-        #[allow(missing_docs)]
         owner(ownerCall),
         #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
@@ -10805,6 +10808,8 @@ function transferOwnership(address newOwner) external;
         renounceRole(renounceRoleCall),
         #[allow(missing_docs)]
         reserveInputMasks(reserveInputMasksCall),
+        #[allow(missing_docs)]
+        reserveMaskIndex(reserveMaskIndexCall),
         #[allow(missing_docs)]
         resetAccessControl(resetAccessControlCall),
         #[allow(missing_docs)]
@@ -10848,6 +10853,7 @@ function transferOwnership(address newOwner) external;
             [23u8, 99u8, 69u8, 20u8],
             [28u8, 116u8, 83u8, 219u8],
             [30u8, 228u8, 238u8, 15u8],
+            [33u8, 220u8, 123u8, 155u8],
             [35u8, 40u8, 189u8, 18u8],
             [36u8, 138u8, 156u8, 163u8],
             [47u8, 47u8, 241u8, 93u8],
@@ -10873,7 +10879,6 @@ function transferOwnership(address newOwner) external;
             [216u8, 39u8, 13u8, 206u8],
             [234u8, 230u8, 246u8, 82u8],
             [235u8, 133u8, 117u8, 222u8],
-            [235u8, 174u8, 53u8, 231u8],
             [242u8, 253u8, 227u8, 139u8],
             [246u8, 96u8, 60u8, 97u8],
             [252u8, 120u8, 178u8, 232u8],
@@ -10888,6 +10893,7 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(creationBlock),
             ::core::stringify!(baseNonce),
             ::core::stringify!(authenticateClient),
+            ::core::stringify!(reserveMaskIndex),
             ::core::stringify!(availableInputMasks),
             ::core::stringify!(getRoleAdmin),
             ::core::stringify!(grantRole),
@@ -10913,7 +10919,6 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(creationTime),
             ::core::stringify!(CLIENT_ROLE),
             ::core::stringify!(sendPrivateOutputShares),
-            ::core::stringify!(obtainInputMasks),
             ::core::stringify!(transferOwnership),
             ::core::stringify!(resetCoordinator),
             ::core::stringify!(isParty),
@@ -10928,6 +10933,7 @@ function transferOwnership(address newOwner) external;
             <creationBlockCall as alloy_sol_types::SolCall>::SIGNATURE,
             <baseNonceCall as alloy_sol_types::SolCall>::SIGNATURE,
             <authenticateClientCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <reserveMaskIndexCall as alloy_sol_types::SolCall>::SIGNATURE,
             <availableInputMasksCall as alloy_sol_types::SolCall>::SIGNATURE,
             <getRoleAdminCall as alloy_sol_types::SolCall>::SIGNATURE,
             <grantRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
@@ -10953,7 +10959,6 @@ function transferOwnership(address newOwner) external;
             <creationTimeCall as alloy_sol_types::SolCall>::SIGNATURE,
             <CLIENT_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
             <sendPrivateOutputSharesCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <obtainInputMasksCall as alloy_sol_types::SolCall>::SIGNATURE,
             <transferOwnershipCall as alloy_sol_types::SolCall>::SIGNATURE,
             <resetCoordinatorCall as alloy_sol_types::SolCall>::SIGNATURE,
             <isPartyCall as alloy_sol_types::SolCall>::SIGNATURE,
@@ -11038,9 +11043,6 @@ function transferOwnership(address newOwner) external;
                     <isDesignatedPartyCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::isParty(_) => <isPartyCall as alloy_sol_types::SolCall>::SELECTOR,
-                Self::obtainInputMasks(_) => {
-                    <obtainInputMasksCall as alloy_sol_types::SolCall>::SELECTOR
-                }
                 Self::owner(_) => <ownerCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::renounceOwnership(_) => {
                     <renounceOwnershipCall as alloy_sol_types::SolCall>::SELECTOR
@@ -11050,6 +11052,9 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::reserveInputMasks(_) => {
                     <reserveInputMasksCall as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::reserveMaskIndex(_) => {
+                    <reserveMaskIndexCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::resetAccessControl(_) => {
                     <resetAccessControlCall as alloy_sol_types::SolCall>::SELECTOR
@@ -11188,6 +11193,17 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorCalls::authenticateClient)
                     }
                     authenticateClient
+                },
+                {
+                    fn reserveMaskIndex(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
+                        <reserveMaskIndexCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelCoordinatorCalls::reserveMaskIndex)
+                    }
+                    reserveMaskIndex
                 },
                 {
                     fn availableInputMasks(
@@ -11455,17 +11471,6 @@ function transferOwnership(address newOwner) external;
                     sendPrivateOutputShares
                 },
                 {
-                    fn obtainInputMasks(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
-                        <obtainInputMasksCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(StoffelCoordinatorCalls::obtainInputMasks)
-                    }
-                    obtainInputMasks
-                },
-                {
                     fn transferOwnership(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
@@ -11603,6 +11608,17 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorCalls::authenticateClient)
                     }
                     authenticateClient
+                },
+                {
+                    fn reserveMaskIndex(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
+                        <reserveMaskIndexCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelCoordinatorCalls::reserveMaskIndex)
+                    }
+                    reserveMaskIndex
                 },
                 {
                     fn availableInputMasks(
@@ -11880,17 +11896,6 @@ function transferOwnership(address newOwner) external;
                     sendPrivateOutputShares
                 },
                 {
-                    fn obtainInputMasks(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
-                        <obtainInputMasksCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelCoordinatorCalls::obtainInputMasks)
-                    }
-                    obtainInputMasks
-                },
-                {
                     fn transferOwnership(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
@@ -12020,11 +12025,6 @@ function transferOwnership(address newOwner) external;
                 Self::isParty(inner) => {
                     <isPartyCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
-                Self::obtainInputMasks(inner) => {
-                    <obtainInputMasksCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
@@ -12040,6 +12040,11 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::reserveInputMasks(inner) => {
                     <reserveInputMasksCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::reserveMaskIndex(inner) => {
+                    <reserveMaskIndexCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -12215,12 +12220,6 @@ function transferOwnership(address newOwner) external;
                 Self::isParty(inner) => {
                     <isPartyCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
                 }
-                Self::obtainInputMasks(inner) => {
-                    <obtainInputMasksCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
                 }
@@ -12238,6 +12237,12 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::reserveInputMasks(inner) => {
                     <reserveInputMasksCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::reserveMaskIndex(inner) => {
+                    <reserveMaskIndexCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -12334,15 +12339,17 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         AlreadySubmittedInputs(AlreadySubmittedInputs),
         #[allow(missing_docs)]
+        ClientAlreadyReservedIndex(ClientAlreadyReservedIndex),
+        #[allow(missing_docs)]
         ECDSAInvalidSignature(ECDSAInvalidSignature),
         #[allow(missing_docs)]
         ECDSAInvalidSignatureLength(ECDSAInvalidSignatureLength),
         #[allow(missing_docs)]
         ECDSAInvalidSignatureS(ECDSAInvalidSignatureS),
         #[allow(missing_docs)]
-        IndexNotReserved(IndexNotReserved),
+        IndexAlreadyReserved(IndexAlreadyReserved),
         #[allow(missing_docs)]
-        IndicesAlreadyReserved(IndicesAlreadyReserved),
+        IndexNotReserved(IndexNotReserved),
         #[allow(missing_docs)]
         NoIndicesReserved(NoIndicesReserved),
         #[allow(missing_docs)]
@@ -12352,15 +12359,13 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         NotAtRound(NotAtRound),
         #[allow(missing_docs)]
-        NotEnoughIndices(NotEnoughIndices),
-        #[allow(missing_docs)]
         NotEnoughMPCParties(NotEnoughMPCParties),
+        #[allow(missing_docs)]
+        OutOfIndices(OutOfIndices),
         #[allow(missing_docs)]
         OwnableInvalidOwner(OwnableInvalidOwner),
         #[allow(missing_docs)]
         OwnableUnauthorizedAccount(OwnableUnauthorizedAccount),
-        #[allow(missing_docs)]
-        ZeroIndices(ZeroIndices),
         #[allow(missing_docs)]
         ZeroMaskedInput(ZeroMaskedInput),
     }
@@ -12377,16 +12382,16 @@ function transferOwnership(address newOwner) external;
             [22u8, 146u8, 60u8, 234u8],
             [30u8, 79u8, 189u8, 247u8],
             [58u8, 35u8, 98u8, 104u8],
+            [74u8, 226u8, 53u8, 249u8],
             [79u8, 95u8, 191u8, 195u8],
             [102u8, 151u8, 178u8, 50u8],
             [111u8, 175u8, 159u8, 5u8],
             [160u8, 50u8, 172u8, 107u8],
+            [160u8, 184u8, 199u8, 8u8],
             [171u8, 220u8, 224u8, 106u8],
-            [172u8, 169u8, 47u8, 9u8],
-            [178u8, 253u8, 85u8, 24u8],
             [191u8, 162u8, 23u8, 216u8],
+            [195u8, 21u8, 160u8, 245u8],
             [215u8, 139u8, 206u8, 12u8],
-            [223u8, 61u8, 117u8, 226u8],
             [226u8, 81u8, 125u8, 63u8],
             [246u8, 69u8, 238u8, 223u8],
             [252u8, 230u8, 152u8, 247u8],
@@ -12399,16 +12404,16 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(ZeroMaskedInput),
             ::core::stringify!(OwnableInvalidOwner),
             ::core::stringify!(NotEnoughMPCParties),
+            ::core::stringify!(OutOfIndices),
             ::core::stringify!(AlreadySubmittedInputs),
             ::core::stringify!(AccessControlBadConfirmation),
             ::core::stringify!(NoIndicesReserved),
             ::core::stringify!(NotAClient),
+            ::core::stringify!(IndexAlreadyReserved),
             ::core::stringify!(NotAnExistingParty),
-            ::core::stringify!(IndicesAlreadyReserved),
-            ::core::stringify!(ZeroIndices),
             ::core::stringify!(NotAtRound),
+            ::core::stringify!(ClientAlreadyReservedIndex),
             ::core::stringify!(ECDSAInvalidSignatureS),
-            ::core::stringify!(NotEnoughIndices),
             ::core::stringify!(AccessControlUnauthorizedAccount),
             ::core::stringify!(ECDSAInvalidSignature),
             ::core::stringify!(ECDSAInvalidSignatureLength),
@@ -12421,16 +12426,16 @@ function transferOwnership(address newOwner) external;
             <ZeroMaskedInput as alloy_sol_types::SolError>::SIGNATURE,
             <OwnableInvalidOwner as alloy_sol_types::SolError>::SIGNATURE,
             <NotEnoughMPCParties as alloy_sol_types::SolError>::SIGNATURE,
+            <OutOfIndices as alloy_sol_types::SolError>::SIGNATURE,
             <AlreadySubmittedInputs as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlBadConfirmation as alloy_sol_types::SolError>::SIGNATURE,
             <NoIndicesReserved as alloy_sol_types::SolError>::SIGNATURE,
             <NotAClient as alloy_sol_types::SolError>::SIGNATURE,
+            <IndexAlreadyReserved as alloy_sol_types::SolError>::SIGNATURE,
             <NotAnExistingParty as alloy_sol_types::SolError>::SIGNATURE,
-            <IndicesAlreadyReserved as alloy_sol_types::SolError>::SIGNATURE,
-            <ZeroIndices as alloy_sol_types::SolError>::SIGNATURE,
             <NotAtRound as alloy_sol_types::SolError>::SIGNATURE,
+            <ClientAlreadyReservedIndex as alloy_sol_types::SolError>::SIGNATURE,
             <ECDSAInvalidSignatureS as alloy_sol_types::SolError>::SIGNATURE,
-            <NotEnoughIndices as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlUnauthorizedAccount as alloy_sol_types::SolError>::SIGNATURE,
             <ECDSAInvalidSignature as alloy_sol_types::SolError>::SIGNATURE,
             <ECDSAInvalidSignatureLength as alloy_sol_types::SolError>::SIGNATURE,
@@ -12477,6 +12482,9 @@ function transferOwnership(address newOwner) external;
                 Self::AlreadySubmittedInputs(_) => {
                     <AlreadySubmittedInputs as alloy_sol_types::SolError>::SELECTOR
                 }
+                Self::ClientAlreadyReservedIndex(_) => {
+                    <ClientAlreadyReservedIndex as alloy_sol_types::SolError>::SELECTOR
+                }
                 Self::ECDSAInvalidSignature(_) => {
                     <ECDSAInvalidSignature as alloy_sol_types::SolError>::SELECTOR
                 }
@@ -12486,11 +12494,11 @@ function transferOwnership(address newOwner) external;
                 Self::ECDSAInvalidSignatureS(_) => {
                     <ECDSAInvalidSignatureS as alloy_sol_types::SolError>::SELECTOR
                 }
+                Self::IndexAlreadyReserved(_) => {
+                    <IndexAlreadyReserved as alloy_sol_types::SolError>::SELECTOR
+                }
                 Self::IndexNotReserved(_) => {
                     <IndexNotReserved as alloy_sol_types::SolError>::SELECTOR
-                }
-                Self::IndicesAlreadyReserved(_) => {
-                    <IndicesAlreadyReserved as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::NoIndicesReserved(_) => {
                     <NoIndicesReserved as alloy_sol_types::SolError>::SELECTOR
@@ -12504,20 +12512,17 @@ function transferOwnership(address newOwner) external;
                 Self::NotAtRound(_) => {
                     <NotAtRound as alloy_sol_types::SolError>::SELECTOR
                 }
-                Self::NotEnoughIndices(_) => {
-                    <NotEnoughIndices as alloy_sol_types::SolError>::SELECTOR
-                }
                 Self::NotEnoughMPCParties(_) => {
                     <NotEnoughMPCParties as alloy_sol_types::SolError>::SELECTOR
+                }
+                Self::OutOfIndices(_) => {
+                    <OutOfIndices as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::OwnableInvalidOwner(_) => {
                     <OwnableInvalidOwner as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::OwnableUnauthorizedAccount(_) => {
                     <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::SELECTOR
-                }
-                Self::ZeroIndices(_) => {
-                    <ZeroIndices as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::ZeroMaskedInput(_) => {
                     <ZeroMaskedInput as alloy_sol_types::SolError>::SELECTOR
@@ -12597,6 +12602,15 @@ function transferOwnership(address newOwner) external;
                     NotEnoughMPCParties
                 },
                 {
+                    fn OutOfIndices(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <OutOfIndices as alloy_sol_types::SolError>::abi_decode_raw(data)
+                            .map(StoffelCoordinatorErrors::OutOfIndices)
+                    }
+                    OutOfIndices
+                },
+                {
                     fn AlreadySubmittedInputs(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
@@ -12639,6 +12653,17 @@ function transferOwnership(address newOwner) external;
                     NotAClient
                 },
                 {
+                    fn IndexAlreadyReserved(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <IndexAlreadyReserved as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelCoordinatorErrors::IndexAlreadyReserved)
+                    }
+                    IndexAlreadyReserved
+                },
+                {
                     fn NotAnExistingParty(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
@@ -12650,26 +12675,6 @@ function transferOwnership(address newOwner) external;
                     NotAnExistingParty
                 },
                 {
-                    fn IndicesAlreadyReserved(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
-                        <IndicesAlreadyReserved as alloy_sol_types::SolError>::abi_decode_raw(
-                                data,
-                            )
-                            .map(StoffelCoordinatorErrors::IndicesAlreadyReserved)
-                    }
-                    IndicesAlreadyReserved
-                },
-                {
-                    fn ZeroIndices(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
-                        <ZeroIndices as alloy_sol_types::SolError>::abi_decode_raw(data)
-                            .map(StoffelCoordinatorErrors::ZeroIndices)
-                    }
-                    ZeroIndices
-                },
-                {
                     fn NotAtRound(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
@@ -12677,6 +12682,17 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorErrors::NotAtRound)
                     }
                     NotAtRound
+                },
+                {
+                    fn ClientAlreadyReservedIndex(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <ClientAlreadyReservedIndex as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelCoordinatorErrors::ClientAlreadyReservedIndex)
+                    }
+                    ClientAlreadyReservedIndex
                 },
                 {
                     fn ECDSAInvalidSignatureS(
@@ -12688,17 +12704,6 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorErrors::ECDSAInvalidSignatureS)
                     }
                     ECDSAInvalidSignatureS
-                },
-                {
-                    fn NotEnoughIndices(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
-                        <NotEnoughIndices as alloy_sol_types::SolError>::abi_decode_raw(
-                                data,
-                            )
-                            .map(StoffelCoordinatorErrors::NotEnoughIndices)
-                    }
-                    NotEnoughIndices
                 },
                 {
                     fn AccessControlUnauthorizedAccount(
@@ -12822,6 +12827,17 @@ function transferOwnership(address newOwner) external;
                     NotEnoughMPCParties
                 },
                 {
+                    fn OutOfIndices(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <OutOfIndices as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelCoordinatorErrors::OutOfIndices)
+                    }
+                    OutOfIndices
+                },
+                {
                     fn AlreadySubmittedInputs(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
@@ -12866,6 +12882,17 @@ function transferOwnership(address newOwner) external;
                     NotAClient
                 },
                 {
+                    fn IndexAlreadyReserved(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <IndexAlreadyReserved as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelCoordinatorErrors::IndexAlreadyReserved)
+                    }
+                    IndexAlreadyReserved
+                },
+                {
                     fn NotAnExistingParty(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
@@ -12875,28 +12902,6 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorErrors::NotAnExistingParty)
                     }
                     NotAnExistingParty
-                },
-                {
-                    fn IndicesAlreadyReserved(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
-                        <IndicesAlreadyReserved as alloy_sol_types::SolError>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelCoordinatorErrors::IndicesAlreadyReserved)
-                    }
-                    IndicesAlreadyReserved
-                },
-                {
-                    fn ZeroIndices(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
-                        <ZeroIndices as alloy_sol_types::SolError>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelCoordinatorErrors::ZeroIndices)
-                    }
-                    ZeroIndices
                 },
                 {
                     fn NotAtRound(
@@ -12910,6 +12915,17 @@ function transferOwnership(address newOwner) external;
                     NotAtRound
                 },
                 {
+                    fn ClientAlreadyReservedIndex(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <ClientAlreadyReservedIndex as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelCoordinatorErrors::ClientAlreadyReservedIndex)
+                    }
+                    ClientAlreadyReservedIndex
+                },
+                {
                     fn ECDSAInvalidSignatureS(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
@@ -12919,17 +12935,6 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorErrors::ECDSAInvalidSignatureS)
                     }
                     ECDSAInvalidSignatureS
-                },
-                {
-                    fn NotEnoughIndices(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
-                        <NotEnoughIndices as alloy_sol_types::SolError>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelCoordinatorErrors::NotEnoughIndices)
-                    }
-                    NotEnoughIndices
                 },
                 {
                     fn AccessControlUnauthorizedAccount(
@@ -13011,6 +13016,11 @@ function transferOwnership(address newOwner) external;
                         inner,
                     )
                 }
+                Self::ClientAlreadyReservedIndex(inner) => {
+                    <ClientAlreadyReservedIndex as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::ECDSAInvalidSignature(inner) => {
                     <ECDSAInvalidSignature as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
@@ -13026,13 +13036,13 @@ function transferOwnership(address newOwner) external;
                         inner,
                     )
                 }
-                Self::IndexNotReserved(inner) => {
-                    <IndexNotReserved as alloy_sol_types::SolError>::abi_encoded_size(
+                Self::IndexAlreadyReserved(inner) => {
+                    <IndexAlreadyReserved as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
                     )
                 }
-                Self::IndicesAlreadyReserved(inner) => {
-                    <IndicesAlreadyReserved as alloy_sol_types::SolError>::abi_encoded_size(
+                Self::IndexNotReserved(inner) => {
+                    <IndexNotReserved as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -13052,15 +13062,13 @@ function transferOwnership(address newOwner) external;
                 Self::NotAtRound(inner) => {
                     <NotAtRound as alloy_sol_types::SolError>::abi_encoded_size(inner)
                 }
-                Self::NotEnoughIndices(inner) => {
-                    <NotEnoughIndices as alloy_sol_types::SolError>::abi_encoded_size(
-                        inner,
-                    )
-                }
                 Self::NotEnoughMPCParties(inner) => {
                     <NotEnoughMPCParties as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
                     )
+                }
+                Self::OutOfIndices(inner) => {
+                    <OutOfIndices as alloy_sol_types::SolError>::abi_encoded_size(inner)
                 }
                 Self::OwnableInvalidOwner(inner) => {
                     <OwnableInvalidOwner as alloy_sol_types::SolError>::abi_encoded_size(
@@ -13071,9 +13079,6 @@ function transferOwnership(address newOwner) external;
                     <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
                     )
-                }
-                Self::ZeroIndices(inner) => {
-                    <ZeroIndices as alloy_sol_types::SolError>::abi_encoded_size(inner)
                 }
                 Self::ZeroMaskedInput(inner) => {
                     <ZeroMaskedInput as alloy_sol_types::SolError>::abi_encoded_size(
@@ -13109,6 +13114,12 @@ function transferOwnership(address newOwner) external;
                         out,
                     )
                 }
+                Self::ClientAlreadyReservedIndex(inner) => {
+                    <ClientAlreadyReservedIndex as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::ECDSAInvalidSignature(inner) => {
                     <ECDSAInvalidSignature as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
@@ -13127,14 +13138,14 @@ function transferOwnership(address newOwner) external;
                         out,
                     )
                 }
-                Self::IndexNotReserved(inner) => {
-                    <IndexNotReserved as alloy_sol_types::SolError>::abi_encode_raw(
+                Self::IndexAlreadyReserved(inner) => {
+                    <IndexAlreadyReserved as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
                 }
-                Self::IndicesAlreadyReserved(inner) => {
-                    <IndicesAlreadyReserved as alloy_sol_types::SolError>::abi_encode_raw(
+                Self::IndexNotReserved(inner) => {
+                    <IndexNotReserved as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -13157,14 +13168,14 @@ function transferOwnership(address newOwner) external;
                 Self::NotAtRound(inner) => {
                     <NotAtRound as alloy_sol_types::SolError>::abi_encode_raw(inner, out)
                 }
-                Self::NotEnoughIndices(inner) => {
-                    <NotEnoughIndices as alloy_sol_types::SolError>::abi_encode_raw(
+                Self::NotEnoughMPCParties(inner) => {
+                    <NotEnoughMPCParties as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
                 }
-                Self::NotEnoughMPCParties(inner) => {
-                    <NotEnoughMPCParties as alloy_sol_types::SolError>::abi_encode_raw(
+                Self::OutOfIndices(inner) => {
+                    <OutOfIndices as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -13177,12 +13188,6 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::OwnableUnauthorizedAccount(inner) => {
                     <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::ZeroIndices(inner) => {
-                    <ZeroIndices as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -13245,12 +13250,6 @@ function transferOwnership(address newOwner) external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                30u8, 20u8, 171u8, 229u8, 208u8, 205u8, 185u8, 106u8, 221u8, 231u8,
-                185u8, 236u8, 169u8, 177u8, 75u8, 192u8, 141u8, 246u8, 35u8, 181u8,
-                128u8, 90u8, 253u8, 229u8, 163u8, 240u8, 172u8, 173u8, 194u8, 191u8,
-                79u8, 91u8,
-            ],
-            [
                 32u8, 245u8, 94u8, 208u8, 201u8, 47u8, 43u8, 177u8, 200u8, 130u8, 84u8,
                 136u8, 225u8, 227u8, 201u8, 132u8, 99u8, 208u8, 36u8, 178u8, 164u8, 45u8,
                 189u8, 36u8, 131u8, 140u8, 63u8, 117u8, 38u8, 15u8, 67u8, 233u8,
@@ -13301,6 +13300,11 @@ function transferOwnership(address newOwner) external;
                 20u8, 108u8, 158u8, 9u8, 152u8, 120u8, 209u8, 78u8, 137u8, 48u8, 26u8,
             ],
             [
+                171u8, 222u8, 22u8, 183u8, 169u8, 25u8, 44u8, 49u8, 198u8, 35u8, 27u8,
+                21u8, 57u8, 186u8, 214u8, 254u8, 215u8, 118u8, 53u8, 222u8, 76u8, 0u8,
+                135u8, 24u8, 219u8, 220u8, 175u8, 183u8, 184u8, 54u8, 58u8, 254u8,
+            ],
+            [
                 184u8, 154u8, 221u8, 217u8, 55u8, 244u8, 79u8, 144u8, 44u8, 132u8, 149u8,
                 150u8, 100u8, 24u8, 55u8, 205u8, 122u8, 242u8, 252u8, 236u8, 239u8, 34u8,
                 210u8, 167u8, 134u8, 111u8, 220u8, 26u8, 217u8, 192u8, 174u8, 46u8,
@@ -13333,7 +13337,6 @@ function transferOwnership(address newOwner) external;
         ];
         /// The names of the variants in the same order as `SELECTORS`.
         pub const VARIANT_NAMES: &'static [&'static str] = &[
-            ::core::stringify!(ReservedInputEvent),
             ::core::stringify!(MPCStarted),
             ::core::stringify!(EnoughPrivateOutputShares),
             ::core::stringify!(ExecutionDone),
@@ -13344,6 +13347,7 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(InputMaskReservationStarted),
             ::core::stringify!(OwnershipTransferred),
             ::core::stringify!(InitializeStoffelAccessControl),
+            ::core::stringify!(ReservedInputEvent),
             ::core::stringify!(MaskedInputEvent),
             ::core::stringify!(PreprocessingStarted),
             ::core::stringify!(RoleAdminChanged),
@@ -13353,7 +13357,6 @@ function transferOwnership(address newOwner) external;
         ];
         /// The signatures in the same order as `SELECTORS`.
         pub const SIGNATURES: &'static [&'static str] = &[
-            <ReservedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
             <MPCStarted as alloy_sol_types::SolEvent>::SIGNATURE,
             <EnoughPrivateOutputShares as alloy_sol_types::SolEvent>::SIGNATURE,
             <ExecutionDone as alloy_sol_types::SolEvent>::SIGNATURE,
@@ -13364,6 +13367,7 @@ function transferOwnership(address newOwner) external;
             <InputMaskReservationStarted as alloy_sol_types::SolEvent>::SIGNATURE,
             <OwnershipTransferred as alloy_sol_types::SolEvent>::SIGNATURE,
             <InitializeStoffelAccessControl as alloy_sol_types::SolEvent>::SIGNATURE,
+            <ReservedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
             <MaskedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
             <PreprocessingStarted as alloy_sol_types::SolEvent>::SIGNATURE,
             <RoleAdminChanged as alloy_sol_types::SolEvent>::SIGNATURE,
@@ -13952,13 +13956,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<&P, isPartyCall, N> {
             self.call_builder(&isPartyCall { account })
         }
-        ///Creates a new call builder for the [`obtainInputMasks`] function.
-        pub fn obtainInputMasks(
-            &self,
-            nIndices: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, obtainInputMasksCall, N> {
-            self.call_builder(&obtainInputMasksCall { nIndices })
-        }
         ///Creates a new call builder for the [`owner`] function.
         pub fn owner(&self) -> alloy_contract::SolCallBuilder<&P, ownerCall, N> {
             self.call_builder(&ownerCall)
@@ -13982,6 +13979,13 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::SolCallBuilder<&P, reserveInputMasksCall, N> {
             self.call_builder(&reserveInputMasksCall)
+        }
+        ///Creates a new call builder for the [`reserveMaskIndex`] function.
+        pub fn reserveMaskIndex(
+            &self,
+            i: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, reserveMaskIndexCall, N> {
+            self.call_builder(&reserveMaskIndexCall { i })
         }
         ///Creates a new call builder for the [`resetAccessControl`] function.
         pub fn resetAccessControl(
@@ -14021,12 +14025,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn resetInputManager(
             &self,
             nIndicesToReserve: alloy::sol_types::private::primitives::aliases::U256,
-            t: alloy::sol_types::private::primitives::aliases::U256,
+            _t: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, resetInputManagerCall, N> {
             self.call_builder(
                 &resetInputManagerCall {
                     nIndicesToReserve,
-                    t,
+                    _t,
                 },
             )
         }
