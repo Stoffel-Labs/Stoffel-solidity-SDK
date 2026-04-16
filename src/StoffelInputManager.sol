@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { IStoffelInputManager } from "./interfaces/IStoffelInputManager.sol";
-import { StoffelAccessControl } from "./StoffelAccessControl.sol";
-import { ECDSA } from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import { MessageHashUtils } from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {IStoffelInputManager} from "./interfaces/IStoffelInputManager.sol";
+import {StoffelAccessControl} from "./StoffelAccessControl.sol";
 
 /// @title StoffelInputManager
 /// @author Stoffel Labs
@@ -23,26 +21,24 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     }
 
     /// Structure for storing an output destined for a specific client.
-    struct PerClientOutput {
-        /// The output shares encrypted under the client's key.
+    struct Output {
+        /// The output shares (encrypted for private outputs, unencrypted for public outputs) under the client's key.
         bytes[] shares;
-	/// The number of shares so far received from nodes.
-	uint256 nShares;
-	/// Mapping to track which parties have sent their shares for this client.
-	mapping (address => bool) sharesReceived;
+        /// The number of shares so far received from nodes.
+        uint256 nShares;
+        /// Mapping to track which parties have sent their shares for this client.
+        mapping(address => bool) sharesReceived;
     }
 
-    /// Encrypted output shares per client for private per-client outputs.
-    mapping (address => PerClientOutput) internal privateOutputs;
-    /// Public outputs.
-    bytes internal publicOutputs;
+    /// @notice Maximum number of clients that can receive outputs
+    uint256 internal maxOutputs;
+
+    /// @notice Private encrypted output shares for specific clients and public unencrypted output shares at `address(0)`.
+    mapping(address => Output) internal outputs;
 
     /// @notice Mapping from input mask index to the client who reserved it
     /// @dev Address(0) indicates the index is available for reservation
     mapping(uint256 => address) internal reservedInputIndices;
-
-    // first value is number negative auths, second is number of positive auths
-    mapping(address => uint256[2]) internal clientAuths;
 
     /// @notice Total number of input mask indices available
     /// @dev Set once during preprocessing by the designated party
@@ -59,9 +55,6 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// After an instance has been executed, i.e., upon reset, the base nonce is incremented by the
     /// total number of indices to enforce the nonce's uniqueness.
     uint256 public baseNonce;
-
-    /// The threshold value. Used for authentication.
-    uint256 internal t;
 
     /// @notice Structure representing a client's masked input
     /// @dev Contains the reserved index and the masked value submitted by the client
@@ -91,9 +84,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @param reservedIndex The index used for this input
     event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
 
-    event ClientAuthenticated(address indexed client, bool success);
-
-    event EnoughPrivateOutputShares(address indexed client, bytes[] shares);
+    event EnoughOutputShares(address indexed client, bytes[] shares);
 
     error AlreadyReceivedOutputShares(address client, address sender);
 
@@ -101,52 +92,48 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
     error ZeroMaskedInput(address client);
 
-    error OutOfIndices(address client);
-
     error IndexNotReserved(address client, uint256 index);
 
     error NoIndicesReserved(address client);
+
+    error IndexOutOfBounds(address client, uint256 index);
 
     error ClientAlreadyReservedIndex(address client, uint256 i);
 
     error IndexAlreadyReserved(uint256 i, address reqClient, address resClient);
 
-    constructor (uint256 nIndicesToReserve, uint256 _t) {
-	baseNonce = 0;
-        _resetInputManager(nIndicesToReserve, _t);
+    error TooManyOutputClients();
+
+    constructor(uint256 nIndicesToReserve) {
+        baseNonce = 0;
+        nTotalIndices = nIndicesToReserve;
+        nReservedIndices = 0;
+        nInputsSubmitted = 0;
+        maxOutputs = nIndicesToReserve + 1; // one public output + number of inputs
+
+        emit IndexBufferEvent(nTotalIndices, msg.sender);
     }
 
     /// @notice Initializes the input mask buffer with a specified number of indices
-    /// @param nIndicesToReserve Number of input mask indices to make available
-    /// @param _t The threshold value
-    function _resetInputManager(uint256 nIndicesToReserve, uint256 _t) internal {
-	baseNonce += nTotalIndices;
-	nTotalIndices = nIndicesToReserve;
-	nReservedIndices = 0;
-	nInputsSubmitted = 0;
-	t = _t;
-
+    function _resetInputManager() internal {
         address[] memory parties = getRoleMembers(PARTY_ROLE);
         uint256 nParties = getRoleMemberCount(PARTY_ROLE);
 
-	for (uint256 i = 0; i < nTotalIndices; i++) {
-	    address client = reservedInputIndices[i];
+        for (uint256 i = 0; i < nTotalIndices; i++) {
+            address client = reservedInputIndices[i];
 
-	    delete clientInputs[client];
-	    delete clientAuths[client];
+            delete clientInputs[client];
 
-       	    for (uint256 j = 0; j < nParties; j++) {
-            	delete privateOutputs[client].sharesReceived[parties[j]];
-       	    }
-	    delete privateOutputs[client];
-	    delete reservedInputIndices[i];
-	}
+            for (uint256 j = 0; j < nParties; j++) {
+                delete outputs[client].sharesReceived[parties[j]];
+            }
+            delete outputs[client];
+            delete reservedInputIndices[i];
+        }
 
-	emit IndexBufferEvent(nTotalIndices, msg.sender);
-    }
-
-    function resetInputManager(uint256 nIndicesToReserve, uint256 _t) external onlyRole(DESIGNATED_PARTY_ROLE) {
-        _resetInputManager(nIndicesToReserve, _t);
+        nReservedIndices = 0;
+        nInputsSubmitted = 0;
+        baseNonce += nTotalIndices;
     }
 
     /// @notice Returns the number of input mask indices still available
@@ -160,32 +147,27 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @dev Clients must reserve an index before they can request the corresponding
     ///      input mask from MPC nodes and submit their masked input.
     function reserveMaskIndex(uint256 i) external override {
-	// check if client already reserved indices
-	for (uint256 j = 0; j < nTotalIndices; j++) {
-	    if (reservedInputIndices[j] == msg.sender) {
-		revert ClientAlreadyReservedIndex(msg.sender, j);
-	    }
-	}
-
-	if (reservedInputIndices[i] != address(0)) {
-	    revert IndexAlreadyReserved(i, msg.sender, reservedInputIndices[i]);
-	}
-
-        reservedInputIndices[i] = msg.sender;
-	_grantRole(CLIENT_ROLE, msg.sender);
-
-	PerClientOutput storage output = privateOutputs[msg.sender];
-	output.shares = new bytes[](3 * t + 1);
-	output.nShares = 0;
-
-	// TODO: not sure if this is the best way, consider storing the relevant list of nodes elsewhere perhaps?
-        address[] memory parties = getRoleMembers(PARTY_ROLE);
-        uint256 nParties = getRoleMemberCount(PARTY_ROLE);
-        for (uint256 j = 0; j < nParties; j++) {
-	    output.sharesReceived[parties[j]] = false;
+        // check if index within bounds
+        if (i >= nTotalIndices) {
+            revert IndexOutOfBounds(msg.sender, i);
         }
 
-	nReservedIndices++;
+        // check if client already reserved indices
+        for (uint256 j = 0; j < nTotalIndices; j++) {
+            if (reservedInputIndices[j] == msg.sender) {
+                revert ClientAlreadyReservedIndex(msg.sender, j);
+            }
+        }
+
+        // check if index available
+        if (reservedInputIndices[i] != address(0)) {
+            revert IndexAlreadyReserved(i, msg.sender, reservedInputIndices[i]);
+        }
+
+        reservedInputIndices[i] = msg.sender;
+        _grantRole(INPUT_CLIENT_ROLE, msg.sender);
+
+        nReservedIndices++;
         emit ReservedInputEvent(msg.sender, i);
     }
 
@@ -194,103 +176,77 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @param reservedIndex The index that was previously reserved by this client
     /// @dev After submission, the index is unreserved to prevent mask reuse.
     ///      The mask must be obtained off-chain from MPC nodes before calling this.
-    function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external override onlyRole(CLIENT_ROLE) {
-	if (reservedInputIndices[reservedIndex] != msg.sender) {
-            revert IndexNotReserved(msg.sender, reservedIndex);
-	}
-
-	if (maskedInput == 0) {
-	    revert ZeroMaskedInput(msg.sender);
-	}
-
-	if (clientInputs[msg.sender].maskedInput != 0) {
-	    revert AlreadySubmittedInputs(msg.sender);
-	}
-
-        clientInputs[msg.sender] = MaskedInput({ index: reservedIndex, maskedInput: maskedInput });
-
-        emit MaskedInputEvent(msg.sender, maskedInput, reservedIndex);
-	nInputsSubmitted++;
-    }
-
-    /// @notice Authenticates a client using ECDSA signature verification, proving ownership of an address
-    /// @param clientAddr Address whose ownership is to be proved
-    /// @param signature ECDSA signature over the nonce
-    /// @dev Called off-chain by MPC nodes to verify client identity before
-    ///      providing input masks. Uses EIP-191 signed message format.
-    function authenticateClient(address clientAddr, bytes calldata signature)
+    function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex)
         external
         override
-        onlyRole(PARTY_ROLE)
+        onlyRole(INPUT_CLIENT_ROLE)
     {
-	if (!hasRole(CLIENT_ROLE, clientAddr)) {
-	    revert NotAClient(clientAddr);
-	}
+        if (reservedInputIndices[reservedIndex] != msg.sender) {
+            revert IndexNotReserved(msg.sender, reservedIndex);
+        }
 
-	// the nonce is the current base value plus the lowest reserved index
-	uint256 lowestReservedIndex = nTotalIndices;
-	for (uint256 i = 0; i < nTotalIndices; i++) {
-	    if (reservedInputIndices[i] == clientAddr) {
-		lowestReservedIndex = i;
-		break;
-	    }
-	}
-	if (lowestReservedIndex == nTotalIndices) {
-            revert NoIndicesReserved(reservedInputIndices[0]);
-	}
-	uint256 nonce = baseNonce + lowestReservedIndex;
+        if (maskedInput == 0) {
+            revert ZeroMaskedInput(msg.sender);
+        }
 
-        bytes32 hashedMsg = MessageHashUtils.toEthSignedMessageHash(keccak256(abi.encode(nonce)));
-        address clientAddress = ECDSA.recover(hashedMsg, signature);
+        if (clientInputs[msg.sender].maskedInput != 0) {
+            revert AlreadySubmittedInputs(msg.sender);
+        }
 
-        if (clientAddress == clientAddr) {
-	    ++clientAuths[clientAddr][1];
-	} else {
-	    ++clientAuths[clientAddr][0];
-	}
+        clientInputs[msg.sender] = MaskedInput({index: reservedIndex, maskedInput: maskedInput});
 
-	require(clientAuths[clientAddr][0] < t + 1 || clientAuths[clientAddr][1] < t + 1, "BUG: the authentication votes by honest clients are inconsistent");
-
-	/// We wait for t+1 calls with the same verification result to be sure that at
-	/// least one of them has been made by an honest party.
-	if (clientAuths[clientAddr][0] >= t + 1) {
-            emit ClientAuthenticated(clientAddr, false);
-	} else if (clientAuths[clientAddr][1] >= t + 1) {
-            emit ClientAuthenticated(clientAddr, true);
-	}
+        emit MaskedInputEvent(msg.sender, maskedInput, reservedIndex);
+        nInputsSubmitted++;
     }
 
-    function sendPublicOutputs(bytes calldata _publicOutputs) external onlyRole(DESIGNATED_PARTY_ROLE) {
-	publicOutputs = _publicOutputs;
-    }
-
-    /// @notice Given encrypted shares and a client address, store the shares to be retrieved by the client at a later point.
+    /// @notice Given shares and a client address, store the shares to be retrieved by the client at a later point.
     /// The coordinator waits until enough shares for reconstruction are available and decryption and reconstruction is up to the
     /// client.
-    function sendPrivateOutputShares(address client, bytes calldata shares) external onlyRole(PARTY_ROLE) {
-	if (!hasRole(CLIENT_ROLE, client)) {
-            revert NotAClient(client);
-	}
+    /// The address `address(0)` is reserved for a public output, which are not encrypted.
+    /// It is at this method where new output clients are added: if a node sends output shares for a client, this client becomes an output client if it is not already.
+    /// There is an upper limit to the number of output clients. A malicious party can cause a DoS by filling up the storage for outputs by sending shares for many different clients.
+    /// @param client The client for which the shares are intended (`address(0)` for public outputs)
+    /// @param shares The output shares (encrypted for private outputs, unencrypted for public outputs)
+    function sendOutputShares(address client, bytes calldata shares) external onlyRole(PARTY_ROLE) {
+        if (!hasRole(OUTPUT_CLIENT_ROLE, client)) {
+            // prevent malicious parties from endlessly filling up storage for outputs
+            uint256 nOutputClients = getRoleMemberCount(OUTPUT_CLIENT_ROLE);
+            if (nOutputClients == maxOutputs) {
+                revert TooManyOutputClients();
+            }
 
-        uint256 nShares = privateOutputs[client].nShares;
+            _grantRole(OUTPUT_CLIENT_ROLE, client);
 
-	if (privateOutputs[client].sharesReceived[msg.sender]) {
+            Output storage output = outputs[msg.sender];
+            output.shares = new bytes[](n);
+            output.nShares = 0;
+
+            address[] memory parties = getRoleMembers(PARTY_ROLE);
+            uint256 nParties = getRoleMemberCount(PARTY_ROLE);
+            for (uint256 j = 0; j < nParties; j++) {
+                output.sharesReceived[parties[j]] = false;
+            }
+        }
+
+        uint256 nShares = outputs[client].nShares;
+
+        if (outputs[client].sharesReceived[msg.sender]) {
             revert AlreadyReceivedOutputShares(client, msg.sender);
-	}
-	// more than n output share messages are never stored, since there are only n parties
-	require(nShares < 3 * t + 1, "BUG: ALREADY RECEIVED SHARES FROM N PARTIES, TOO MANY CLIENTS");
+        }
+        // more than n output share messages are never stored, since there are only n parties
+        require(nShares < n, "BUG: ALREADY RECEIVED SHARES FROM N PARTIES, TOO MANY CLIENTS");
 
-	privateOutputs[client].sharesReceived[msg.sender] = true;
-	privateOutputs[client].shares[nShares] = shares;
-	privateOutputs[client].nShares += 1;
-	nShares += 1;
+        outputs[client].sharesReceived[msg.sender] = true;
+        outputs[client].shares[nShares] = shares;
+        outputs[client].nShares += 1;
+        nShares += 1;
 
-	if (nShares >= 2 * threshold + 1) {
-	    bytes[] memory sentShares = new bytes[](nShares);
-	    for (uint256 i = 0; i < nShares; i++) {
-		sentShares[i] = privateOutputs[client].shares[i];
-	    }
-	    emit EnoughPrivateOutputShares(client, sentShares);
-	}
+        if (nShares >= 2 * t + 1) {
+            bytes[] memory sentShares = new bytes[](nShares);
+            for (uint256 i = 0; i < nShares; i++) {
+                sentShares[i] = outputs[client].shares[i];
+            }
+            emit EnoughOutputShares(client, sentShares);
+        }
     }
 }

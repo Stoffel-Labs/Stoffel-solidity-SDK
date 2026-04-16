@@ -1,20 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import { StoffelCoordinator } from "./StoffelCoordinator.sol";
+import {StoffelCoordinator} from "../src/StoffelCoordinator.sol";
 
 /// A minimal coordinator for testing.
 contract FakeCoordinator is StoffelCoordinator {
-    constructor(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMpcNodes, uint256 nInputs) StoffelCoordinator(stoffelProgramHash, t, initialMpcNodes, nInputs) { }
-    function startPreprocessing() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.Idle) nextRound {
+    constructor(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMpcNodes, uint256 nInputs)
+        StoffelCoordinator(stoffelProgramHash, t, initialMpcNodes, nInputs)
+    {}
+
+    function startPreprocessing()
+        external
+        override
+        onlyRole(DESIGNATED_PARTY_ROLE)
+        atRound(Round.Idle)
+        enoughMpcParties
+        nextRound
+    {
         emit PreprocessingStarted(msg.sender, block.timestamp);
     }
 
-    function reserveInputMasks() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.Preprocessing) nextRound {
+    function reserveInputMasks()
+        external
+        override
+        onlyRole(DESIGNATED_PARTY_ROLE)
+        atRound(Round.Preprocessing)
+        nextRound
+    {
         emit InputMaskReservationStarted(msg.sender, block.timestamp);
     }
 
-    function collectInputs() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.InputMaskReservation) nextRound {
+    function collectInputs()
+        external
+        override
+        onlyRole(DESIGNATED_PARTY_ROLE)
+        atRound(Round.InputMaskReservation)
+        nextRound
+    {
         emit InputCollectionStarted(msg.sender, block.timestamp);
     }
 
@@ -23,7 +45,7 @@ contract FakeCoordinator is StoffelCoordinator {
     }
 
     function sendOutputs() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.MPCExecution) nextRound {
-	emit OutputSendingStarted(msg.sender, block.timestamp);
+        emit OutputSendingStarted(msg.sender, block.timestamp);
     }
 
     function finalize() external override onlyRole(DESIGNATED_PARTY_ROLE) atRound(Round.OutputDistribution) nextRound {

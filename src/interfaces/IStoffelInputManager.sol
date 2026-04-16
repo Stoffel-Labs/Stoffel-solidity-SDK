@@ -20,10 +20,4 @@ interface IStoffelInputManager {
     /// @param maskedInput The masked input value (raw input + mask)
     /// @param reservedIndexed The index that was previously reserved
     function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) external;
-
-    /// @notice Authenticates a client using ECDSA signature verification, proving ownership of an address
-    /// @param clientAddr Address whose ownership is to be proved
-    /// @param signature ECDSA signature over the nonce
-    function authenticateClient(address clientAddr, bytes calldata signature)
-        external;
 }
