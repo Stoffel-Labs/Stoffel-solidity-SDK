@@ -7,7 +7,7 @@ import {FakeCoordinator} from "./FakeCoordinator.sol";
 import {StoffelCoordinator} from "../src/StoffelCoordinator.sol";
 import {StoffelAccessControl} from "../src/StoffelAccessControl.sol";
 
-/// Tests for StoffelCoordinator's base infrastructure: initial state, access control,
+/// @notice Tests for StoffelCoordinator's base infrastructure: initial state, access control,
 /// the enoughMpcParties guard, and the reset mechanism.
 contract StoffelCoordinatorTest is Test {
     FakeCoordinator public coordinator;
@@ -126,6 +126,7 @@ contract StoffelCoordinatorTest is Test {
         assertEq(uint256(coordinator.round()), uint256(StoffelCoordinator.Round.ProgramFinished));
     }
 
+    /// @notice Runs all six lifecycle phases in order against the coordinator under test
     function _runFullCycle() internal {
         coordinator.startPreprocessing();
         coordinator.reserveInputMasks();

@@ -6,6 +6,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {StoffelAccessControl} from "../src/StoffelAccessControl.sol";
 import {IStoffelAccessControl} from "../src/interfaces/IStoffelAccessControl.sol";
 
+/// @notice Tests for StoffelAccessControl: role granting/revoking, threshold enforcement, and interface support.
 contract StoffelAccessControlTest is Test {
     StoffelAccessControl public ac;
 

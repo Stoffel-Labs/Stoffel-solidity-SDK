@@ -20,13 +20,13 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         MaskedInput[] maskedInputs;
     }
 
-    /// Structure for storing an output destined for a specific client.
+    /// @notice Structure for storing an output destined for a specific client
     struct Output {
-        /// The output shares (encrypted for private outputs, unencrypted for public outputs) under the client's key.
+        /// @notice The output shares (encrypted for private outputs, unencrypted for public outputs) under the client's key
         bytes[] shares;
-        /// The number of shares so far received from nodes.
+        /// @notice The number of shares so far received from nodes
         uint256 nShares;
-        /// Mapping to track which parties have sent their shares for this client.
+        /// @notice Mapping to track which parties have sent their shares for this client
         mapping(address => bool) sharesReceived;
     }
 
@@ -47,6 +47,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @notice The number of indices reserved so far
     uint256 internal nReservedIndices;
 
+    /// @notice The number of masked inputs submitted by clients so far
     uint256 internal nInputsSubmitted;
 
     /// Currently, each mask index is authenticated separately with a signature.
@@ -84,26 +85,40 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @param reservedIndex The index used for this input
     event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
 
+    /// @notice Emitted when enough output shares for reconstruction have been received for a client
+    /// @param client The client address the shares are for (`address(0)` for public outputs)
+    /// @param shares All received shares, ready for client-side reconstruction
     event EnoughOutputShares(address indexed client, bytes[] shares);
 
+    /// @notice Thrown when a party tries to send output shares for a client it already submitted shares for
     error AlreadyReceivedOutputShares(address client, address sender);
 
+    /// @notice Thrown when a client tries to submit a masked input but has already done so
     error AlreadySubmittedInputs(address client);
 
+    /// @notice Thrown when a client submits a masked input of zero, which is disallowed
     error ZeroMaskedInput(address client);
 
+    /// @notice Thrown when a client submits a masked input for an index it did not reserve
     error IndexNotReserved(address client, uint256 index);
 
+    /// @notice Thrown when an operation requires the client to have a reserved index but none exists
     error NoIndicesReserved(address client);
 
+    /// @notice Thrown when a client attempts to reserve an index that is out of range
     error IndexOutOfBounds(address client, uint256 index);
 
+    /// @notice Thrown when a client attempts to reserve a second index
     error ClientAlreadyReservedIndex(address client, uint256 i);
 
+    /// @notice Thrown when a client attempts to reserve an index already held by another client
     error IndexAlreadyReserved(uint256 i, address reqClient, address resClient);
 
+    /// @notice Thrown when the number of distinct output clients would exceed the allowed maximum
     error TooManyOutputClients();
 
+    /// @notice Initializes the input manager with the number of input slots
+    /// @param nIndicesToReserve Total number of input mask indices clients may reserve
     constructor(uint256 nIndicesToReserve) {
         baseNonce = 0;
         nTotalIndices = nIndicesToReserve;
@@ -199,14 +214,13 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         nInputsSubmitted++;
     }
 
-    /// @notice Given shares and a client address, store the shares to be retrieved by the client at a later point.
-    /// The coordinator waits until enough shares for reconstruction are available and decryption and reconstruction is up to the
-    /// client.
-    /// The address `address(0)` is reserved for a public output, which are not encrypted.
-    /// It is at this method where new output clients are added: if a node sends output shares for a client, this client becomes an output client if it is not already.
-    /// There is an upper limit to the number of output clients. A malicious party can cause a DoS by filling up the storage for outputs by sending shares for many different clients.
-    /// @param client The client for which the shares are intended (`address(0)` for public outputs)
-    /// @param shares The output shares (encrypted for private outputs, unencrypted for public outputs)
+    /// @notice Stores output shares sent by an MPC party for a given client
+    /// @param client The client the shares are intended for; use `address(0)` for public (unencrypted) outputs
+    /// @param shares The output shares — encrypted under the client's key for private outputs, plaintext for public
+    /// @dev Emits EnoughOutputShares once the reconstruction threshold (2t+1) is reached.
+    ///      New output clients are registered on first share receipt; the total is capped at maxOutputs
+    ///      to prevent a malicious party from exhausting storage by submitting shares for arbitrary addresses.
+    ///      Decryption and secret reconstruction are performed client-side.
     function sendOutputShares(address client, bytes calldata shares) external onlyRole(PARTY_ROLE) {
         if (!hasRole(OUTPUT_CLIENT_ROLE, client)) {
             // prevent malicious parties from endlessly filling up storage for outputs

@@ -78,6 +78,8 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @dev Used for time-based round transitions
     uint256 public creationTime;
 
+    /// @notice Block number when the coordinator was created
+    /// @dev Used alongside creationTime for time- and block-based round transition logic
     uint256 public creationBlock;
 
     /// @notice Current round in the MPC lifecycle
@@ -91,12 +93,13 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
         _;
     }
 
+    /// @notice Modifier that reverts if the current party count is below the required threshold n
     modifier enoughMpcParties() {
         _enoughMpcParties();
         _;
     }
 
-    /// @notice Modifier that checks if enough parties have been registered for MPC execution
+    /// @notice Reverts if the current party count is below the required threshold n
     function _enoughMpcParties() internal view {
         uint256 current = getRoleMemberCount(PARTY_ROLE);
         if (current < n) {
@@ -223,6 +226,9 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     ///      their masked inputs to the contract.
     function reserveInputMasks() external virtual;
 
+    /// @notice Transitions to the input collection phase
+    /// @dev Called after the input mask reservation phase to allow clients to submit their masked inputs.
+    ///      Should use the atRound modifier to enforce correct phase ordering.
     function collectInputs() external virtual;
 
     /// @notice Initiates the off-chain MPC computation

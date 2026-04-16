@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {FakeCoordinator} from "./FakeCoordinator.sol";
 import {StoffelInputManager} from "../src/StoffelInputManager.sol";
 
+/// @notice Tests for StoffelInputManager: index reservation, masked input submission, and nonce tracking.
 contract StoffelInputManagerTest is Test {
     FakeCoordinator public coordinator;
 
