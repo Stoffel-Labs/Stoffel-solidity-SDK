@@ -25,7 +25,13 @@ contract StoffelInputManagerTest is Test {
         nodes[2] = party2;
         nodes[3] = party3;
 
-        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, N_INPUTS);
+        address[] memory outClients = new address[](4);
+        outClients[0] = client1;
+        outClients[1] = client2;
+        outClients[2] = client3;
+        outClients[3] = address(0);
+
+        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, N_INPUTS, outClients);
     }
 
     function test_availableInputMasksInitial() public view {
@@ -222,22 +228,12 @@ contract StoffelInputManagerTest is Test {
         coordinator.sendOutputShares(address(0), share3);
     }
 
-    function test_sendOutputShares_revertsWhenTooManyOutputClients() public {
-        // maxOutputs = N_INPUTS + 1 = 4; fill all slots
-        address[] memory outputClients = new address[](4);
-        outputClients[0] = makeAddr("OUT1");
-        outputClients[1] = makeAddr("OUT2");
-        outputClients[2] = makeAddr("OUT3");
-        outputClients[3] = address(0);
-
-        for (uint256 i = 0; i < 4; i++) {
-            vm.prank(party1);
-            coordinator.sendOutputShares(outputClients[i], abi.encode("share"));
-        }
+    function test_sendOutputShares_revertsIfClientNotRegistered() public {
+        address unregistered = makeAddr("UNREGISTERED");
 
         vm.prank(party1);
-        vm.expectRevert(StoffelInputManager.TooManyOutputClients.selector);
-        coordinator.sendOutputShares(makeAddr("OUT5"), abi.encode("share"));
+        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.OutputClientNotRegistered.selector, unregistered));
+        coordinator.sendOutputShares(unregistered, abi.encode("share"));
     }
 
 }

@@ -5,9 +5,13 @@ import {StoffelCoordinator} from "../src/StoffelCoordinator.sol";
 
 /// A minimal coordinator for testing.
 contract FakeCoordinator is StoffelCoordinator {
-    constructor(bytes32 stoffelProgramHash, uint256 t, address[] memory initialMpcNodes, uint256 nInputs)
-        StoffelCoordinator(stoffelProgramHash, t, initialMpcNodes, nInputs)
-    {}
+    constructor(
+        bytes32 stoffelProgramHash,
+        uint256 t,
+        address[] memory initialMpcNodes,
+        uint256 nInputs,
+        address[] memory outputClients
+    ) StoffelCoordinator(stoffelProgramHash, t, initialMpcNodes, nInputs, outputClients) {}
 
     function startPreprocessing()
         external

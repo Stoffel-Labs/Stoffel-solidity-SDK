@@ -30,8 +30,8 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         mapping(address => bool) sharesReceived;
     }
 
-    /// @notice Maximum number of clients that can receive outputs
-    uint256 internal maxOutputs;
+    /// @notice Addresses of clients that may receive output shares
+    address[] internal outputClients;
 
     /// @notice Private encrypted output shares for specific clients and public unencrypted output shares at `address(0)`.
     mapping(address => Output) internal outputs;
@@ -114,17 +114,22 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @notice Thrown when a client attempts to reserve an index already held by another client
     error IndexAlreadyReserved(uint256 i, address reqClient, address resClient);
 
-    /// @notice Thrown when the number of distinct output clients would exceed the allowed maximum
-    error TooManyOutputClients();
+    /// @notice Thrown when a party tries to send output shares for an address not in the registered output client list
+    error OutputClientNotRegistered(address client);
 
-    /// @notice Initializes the input manager with the number of input slots
+    /// @notice Initializes the input manager with the number of input slots and the set of output clients
     /// @param nIndicesToReserve Total number of input mask indices clients may reserve
-    constructor(uint256 nIndicesToReserve) {
+    /// @param initialOutputClients Addresses that are allowed to receive output shares; include address(0) for public output
+    constructor(uint256 nIndicesToReserve, address[] memory initialOutputClients) {
         baseNonce = 0;
         nTotalIndices = nIndicesToReserve;
         nReservedIndices = 0;
         nInputsSubmitted = 0;
-        maxOutputs = nIndicesToReserve + 1; // one public output + number of inputs
+
+        for (uint256 i = 0; i < initialOutputClients.length; i++) {
+            _grantRole(OUTPUT_CLIENT_ROLE, initialOutputClients[i]);
+        }
+        outputClients = initialOutputClients;
 
         emit IndexBufferEvent(nTotalIndices, msg.sender);
     }
@@ -136,14 +141,16 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
         for (uint256 i = 0; i < nTotalIndices; i++) {
             address client = reservedInputIndices[i];
-
             delete clientInputs[client];
+            delete reservedInputIndices[i];
+        }
 
+        for (uint256 i = 0; i < outputClients.length; i++) {
+            address client = outputClients[i];
             for (uint256 j = 0; j < nParties; j++) {
                 delete outputs[client].sharesReceived[parties[j]];
             }
             delete outputs[client];
-            delete reservedInputIndices[i];
         }
 
         nReservedIndices = 0;
@@ -223,15 +230,14 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     ///      Decryption and secret reconstruction are performed client-side.
     function sendOutputShares(address client, bytes calldata shares) external onlyRole(PARTY_ROLE) {
         if (!hasRole(OUTPUT_CLIENT_ROLE, client)) {
-            // prevent malicious parties from endlessly filling up storage for outputs
-            uint256 nOutputClients = getRoleMemberCount(OUTPUT_CLIENT_ROLE);
-            if (nOutputClients == maxOutputs) {
-                revert TooManyOutputClients();
-            }
+            revert OutputClientNotRegistered(client);
+        }
 
-            _grantRole(OUTPUT_CLIENT_ROLE, client);
+        Output storage output = outputs[client];
 
-            Output storage output = outputs[client];
+        // Output storage is initialized lazily on first share receipt to avoid iterating over all
+        // output clients at coordinator initialization.
+        if (output.shares.length == 0) {
             output.shares = new bytes[](n);
             output.nShares = 0;
 
@@ -242,23 +248,23 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
             }
         }
 
-        uint256 nShares = outputs[client].nShares;
+        uint256 nShares = output.nShares;
 
-        if (outputs[client].sharesReceived[msg.sender]) {
+        if (output.sharesReceived[msg.sender]) {
             revert AlreadyReceivedOutputShares(client, msg.sender);
         }
         // more than n output share messages are never stored, since there are only n parties
         require(nShares < n, "BUG: ALREADY RECEIVED SHARES FROM N PARTIES, TOO MANY CLIENTS");
 
-        outputs[client].sharesReceived[msg.sender] = true;
-        outputs[client].shares[nShares] = shares;
-        outputs[client].nShares += 1;
+        output.sharesReceived[msg.sender] = true;
+        output.shares[nShares] = shares;
+        output.nShares += 1;
         nShares += 1;
 
         if (nShares >= 2 * t + 1) {
             bytes[] memory sentShares = new bytes[](nShares);
             for (uint256 i = 0; i < nShares; i++) {
-                sentShares[i] = outputs[client].shares[i];
+                sentShares[i] = output.shares[i];
             }
             emit EnoughOutputShares(client, sentShares);
         }
