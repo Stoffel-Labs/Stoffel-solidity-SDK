@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {FakeCoordinator} from "./FakeCoordinator.sol";
 import {StoffelInputManager} from "../src/StoffelInputManager.sol";
 
@@ -144,4 +144,100 @@ contract StoffelInputManagerTest is Test {
         }
         assertEq(coordinator.baseNonce(), N_INPUTS * 3);
     }
+
+    function test_sendOutputShares_revertsIfNotParty() public {
+        vm.prank(client1);
+        vm.expectRevert();
+        coordinator.sendOutputShares(client1, abi.encode("share"));
+    }
+
+    function test_sendOutputShares_revertsAlreadyReceivedOutputShares() public {
+        vm.prank(party1);
+        coordinator.sendOutputShares(client1, abi.encode("share1"));
+
+        vm.prank(party1);
+        vm.expectRevert(
+            abi.encodeWithSelector(StoffelInputManager.AlreadyReceivedOutputShares.selector, client1, party1)
+        );
+        coordinator.sendOutputShares(client1, abi.encode("share1_dup"));
+    }
+
+    function test_sendOutputShares_noEventBeforeThreshold() public {
+        // t=1, threshold=2t+1=3; two shares must not trigger EnoughOutputShares
+        vm.recordLogs();
+
+        vm.prank(party1);
+        coordinator.sendOutputShares(client1, abi.encode("share1"));
+        vm.prank(party2);
+        coordinator.sendOutputShares(client1, abi.encode("share2"));
+
+        bytes32 eventSig = StoffelInputManager.EnoughOutputShares.selector;
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; i++) {
+            assertTrue(logs[i].topics[0] != eventSig, "EnoughOutputShares emitted before threshold");
+        }
+    }
+
+    function test_sendOutputShares_emitsEnoughOutputSharesAtThreshold() public {
+        bytes memory share1 = abi.encode("share1");
+        bytes memory share2 = abi.encode("share2");
+        bytes memory share3 = abi.encode("share3");
+
+        vm.prank(party1);
+        coordinator.sendOutputShares(client1, share1);
+        vm.prank(party2);
+        coordinator.sendOutputShares(client1, share2);
+
+        bytes[] memory expectedShares = new bytes[](3);
+        expectedShares[0] = share1;
+        expectedShares[1] = share2;
+        expectedShares[2] = share3;
+
+        vm.expectEmit(true, false, false, true);
+        emit StoffelInputManager.EnoughOutputShares(client1, expectedShares);
+
+        vm.prank(party3);
+        coordinator.sendOutputShares(client1, share3);
+    }
+
+    function test_sendOutputShares_publicOutputAtAddressZero() public {
+        bytes memory share1 = abi.encode("pub1");
+        bytes memory share2 = abi.encode("pub2");
+        bytes memory share3 = abi.encode("pub3");
+
+        vm.prank(party1);
+        coordinator.sendOutputShares(address(0), share1);
+        vm.prank(party2);
+        coordinator.sendOutputShares(address(0), share2);
+
+        bytes[] memory expectedShares = new bytes[](3);
+        expectedShares[0] = share1;
+        expectedShares[1] = share2;
+        expectedShares[2] = share3;
+
+        vm.expectEmit(true, false, false, true);
+        emit StoffelInputManager.EnoughOutputShares(address(0), expectedShares);
+
+        vm.prank(party3);
+        coordinator.sendOutputShares(address(0), share3);
+    }
+
+    function test_sendOutputShares_revertsWhenTooManyOutputClients() public {
+        // maxOutputs = N_INPUTS + 1 = 4; fill all slots
+        address[] memory outputClients = new address[](4);
+        outputClients[0] = makeAddr("OUT1");
+        outputClients[1] = makeAddr("OUT2");
+        outputClients[2] = makeAddr("OUT3");
+        outputClients[3] = address(0);
+
+        for (uint256 i = 0; i < 4; i++) {
+            vm.prank(party1);
+            coordinator.sendOutputShares(outputClients[i], abi.encode("share"));
+        }
+
+        vm.prank(party1);
+        vm.expectRevert(StoffelInputManager.TooManyOutputClients.selector);
+        coordinator.sendOutputShares(makeAddr("OUT5"), abi.encode("share"));
+    }
+
 }

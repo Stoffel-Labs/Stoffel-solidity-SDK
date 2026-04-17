@@ -231,7 +231,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
             _grantRole(OUTPUT_CLIENT_ROLE, client);
 
-            Output storage output = outputs[msg.sender];
+            Output storage output = outputs[client];
             output.shares = new bytes[](n);
             output.nShares = 0;
 
