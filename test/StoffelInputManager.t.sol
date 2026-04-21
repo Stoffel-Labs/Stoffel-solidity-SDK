@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import {Test, Vm} from "forge-std/Test.sol";
 import {FakeCoordinator} from "./FakeCoordinator.sol";
 import {StoffelInputManager} from "../src/StoffelInputManager.sol";
+import {StoffelCoordinator} from "../src/StoffelCoordinator.sol";
 
 /// @notice Tests for StoffelInputManager: index reservation, masked input submission, and nonce tracking.
 contract StoffelInputManagerTest is Test {
@@ -151,6 +152,18 @@ contract StoffelInputManagerTest is Test {
         assertEq(coordinator.baseNonce(), N_INPUTS * 3);
     }
 
+    function test_sendOutputShares_revertsIfNotOutputDistributionRound() public {
+        vm.prank(party1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                StoffelCoordinator.NotAtRound.selector,
+                StoffelCoordinator.Round.OutputDistribution,
+                StoffelCoordinator.Round.Idle
+            )
+        );
+        coordinator.sendOutputShares(client1, abi.encode("share"));
+    }
+
     function test_sendOutputShares_revertsIfNotParty() public {
         vm.prank(client1);
         vm.expectRevert();
@@ -158,6 +171,8 @@ contract StoffelInputManagerTest is Test {
     }
 
     function test_sendOutputShares_revertsAlreadyReceivedOutputShares() public {
+        _advanceToOutputDistribution();
+
         vm.prank(party1);
         coordinator.sendOutputShares(client1, abi.encode("share1"));
 
@@ -170,6 +185,7 @@ contract StoffelInputManagerTest is Test {
 
     function test_sendOutputShares_noEventBeforeThreshold() public {
         // t=1, threshold=2t+1=3; two shares must not trigger EnoughOutputShares
+        _advanceToOutputDistribution();
         vm.recordLogs();
 
         vm.prank(party1);
@@ -185,6 +201,8 @@ contract StoffelInputManagerTest is Test {
     }
 
     function test_sendOutputShares_emitsEnoughOutputSharesAtThreshold() public {
+        _advanceToOutputDistribution();
+
         bytes memory share1 = abi.encode("share1");
         bytes memory share2 = abi.encode("share2");
         bytes memory share3 = abi.encode("share3");
@@ -207,6 +225,8 @@ contract StoffelInputManagerTest is Test {
     }
 
     function test_sendOutputShares_publicOutputAtAddressZero() public {
+        _advanceToOutputDistribution();
+
         bytes memory share1 = abi.encode("pub1");
         bytes memory share2 = abi.encode("pub2");
         bytes memory share3 = abi.encode("pub3");
@@ -229,11 +249,21 @@ contract StoffelInputManagerTest is Test {
     }
 
     function test_sendOutputShares_revertsIfClientNotRegistered() public {
+        _advanceToOutputDistribution();
+
         address unregistered = makeAddr("UNREGISTERED");
 
         vm.prank(party1);
         vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.OutputClientNotRegistered.selector, unregistered));
         coordinator.sendOutputShares(unregistered, abi.encode("share"));
+    }
+
+    function _advanceToOutputDistribution() internal {
+        coordinator.startPreprocessing();
+        coordinator.reserveInputMasks();
+        coordinator.collectInputs();
+        coordinator.startMpc();
+        coordinator.sendOutputs();
     }
 
 }

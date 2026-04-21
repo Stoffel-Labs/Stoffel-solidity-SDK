@@ -243,6 +243,15 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     ///      Should use the atRound modifier for round enforcement.
     function startMpc() external virtual;
 
+    /// @notice Stores output shares for a client; only callable during OutputDistribution
+    function sendOutputShares(address client, bytes calldata shares)
+        external
+        onlyRole(PARTY_ROLE)
+        atRound(Round.OutputDistribution)
+    {
+        _sendOutputShares(client, shares);
+    }
+
     /// @notice Publishes the results of the MPC computation
     /// @dev Called after MPC nodes complete the off-chain computation.
     ///      Public outputs are stored on-chain while private shares are sent

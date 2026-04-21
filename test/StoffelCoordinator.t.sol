@@ -6,6 +6,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {FakeCoordinator} from "./FakeCoordinator.sol";
 import {StoffelCoordinator} from "../src/StoffelCoordinator.sol";
 import {StoffelAccessControl} from "../src/StoffelAccessControl.sol";
+import {StoffelInputManager} from "../src/StoffelInputManager.sol";
 
 /// @notice Tests for StoffelCoordinator's base infrastructure: initial state, access control,
 /// the enoughMpcParties guard, and the reset mechanism.
@@ -15,6 +16,8 @@ contract StoffelCoordinatorTest is Test {
     address party1 = makeAddr("PARTY1");
     address party2 = makeAddr("PARTY2");
     address party3 = makeAddr("PARTY3");
+    address client1 = makeAddr("CLIENT1");
+    address client2 = makeAddr("CLIENT2");
 
     function setUp() public {
         address[] memory nodes = new address[](4);
@@ -23,7 +26,11 @@ contract StoffelCoordinatorTest is Test {
         nodes[2] = party2;
         nodes[3] = party3;
 
-        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, 3, new address[](0));
+        address[] memory outClients = new address[](2);
+        outClients[0] = client1;
+        outClients[1] = client2;
+
+        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, 3, outClients);
     }
 
     function test_initialRoundIsIdle() public view {
@@ -42,9 +49,6 @@ contract StoffelCoordinatorTest is Test {
     }
 
     function test_resetCoordinator() public {
-        address client1 = makeAddr("CLIENT1");
-        address client2 = makeAddr("CLIENT2");
-
         // Reserve indices and submit inputs so the reset has state to clear
         vm.prank(client1);
         coordinator.reserveMaskIndex(0);
@@ -55,7 +59,15 @@ contract StoffelCoordinatorTest is Test {
         vm.prank(client2);
         coordinator.submitMaskedInput(22222, 1);
 
-        _runFullCycle();
+        _advanceToFinalize();
+
+        // Send output shares during OutputDistribution
+        vm.prank(party1);
+        coordinator.sendOutputShares(client1, abi.encode("share1"));
+        vm.prank(party2);
+        coordinator.sendOutputShares(client1, abi.encode("share2"));
+
+        coordinator.finalize();
 
         uint256 newTimestamp = block.timestamp + 1000;
         uint256 newBlock = block.number + 50;
@@ -79,6 +91,13 @@ contract StoffelCoordinatorTest is Test {
         assertEq(coordinator.creationTime(), newTimestamp);
         assertEq(coordinator.creationBlock(), newBlock);
 
+        // Output client roles revoked on reset — sendOutputShares is rejected in the next run
+        _advanceToFinalize();
+
+        vm.prank(party1);
+        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.OutputClientNotRegistered.selector, client1));
+        coordinator.sendOutputShares(client1, abi.encode("share_after_reset"));
+
         // Previously reserved indices are available again
         vm.prank(client1);
         coordinator.reserveMaskIndex(0);
@@ -94,14 +113,11 @@ contract StoffelCoordinatorTest is Test {
     }
 
     function test_resetCoordinator_allowsAnotherFullRun() public {
-        _runFullCycle();
+        _advanceToFinalize();
+        coordinator.finalize();
         coordinator.resetCoordinator();
 
-        coordinator.startPreprocessing();
-        coordinator.reserveInputMasks();
-        coordinator.collectInputs();
-        coordinator.startMpc();
-        coordinator.sendOutputs();
+        _advanceToFinalize();
         coordinator.finalize();
         assertEq(uint256(coordinator.round()), uint256(StoffelCoordinator.Round.ProgramFinished));
     }
@@ -126,13 +142,12 @@ contract StoffelCoordinatorTest is Test {
         assertEq(uint256(coordinator.round()), uint256(StoffelCoordinator.Round.ProgramFinished));
     }
 
-    /// @notice Runs all six lifecycle phases in order against the coordinator under test
-    function _runFullCycle() internal {
+    /// @notice Advances the coordinator through all rounds up to OutputDistribution, ready to finalize
+    function _advanceToFinalize() internal {
         coordinator.startPreprocessing();
         coordinator.reserveInputMasks();
         coordinator.collectInputs();
         coordinator.startMpc();
         coordinator.sendOutputs();
-        coordinator.finalize();
     }
 }

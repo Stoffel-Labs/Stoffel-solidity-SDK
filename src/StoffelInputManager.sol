@@ -138,19 +138,24 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     function _resetInputManager() internal {
         address[] memory parties = getRoleMembers(PARTY_ROLE);
         uint256 nParties = getRoleMemberCount(PARTY_ROLE);
+        address[] memory outputClients = getRoleMembers(OUTPUT_CLIENT_ROLE);
+        uint256 nOutputClients = getRoleMemberCount(OUTPUT_CLIENT_ROLE);
 
         for (uint256 i = 0; i < nTotalIndices; i++) {
             address client = reservedInputIndices[i];
+
             delete clientInputs[client];
             delete reservedInputIndices[i];
         }
 
-        for (uint256 i = 0; i < outputClients.length; i++) {
+        // Properly clear state and revoke roles for all output clients
+        for (uint256 i = 0; i < nOutputClients; i++) {
             address client = outputClients[i];
             for (uint256 j = 0; j < nParties; j++) {
                 delete outputs[client].sharesReceived[parties[j]];
             }
             delete outputs[client];
+            _revokeRole(OUTPUT_CLIENT_ROLE, client);
         }
 
         nReservedIndices = 0;
@@ -228,7 +233,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     ///      New output clients are registered on first share receipt; the total is capped at maxOutputs
     ///      to prevent a malicious party from exhausting storage by submitting shares for arbitrary addresses.
     ///      Decryption and secret reconstruction are performed client-side.
-    function sendOutputShares(address client, bytes calldata shares) external onlyRole(PARTY_ROLE) {
+    function _sendOutputShares(address client, bytes calldata shares) internal {
         if (!hasRole(OUTPUT_CLIENT_ROLE, client)) {
             revert OutputClientNotRegistered(client);
         }
