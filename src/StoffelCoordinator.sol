@@ -70,6 +70,8 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
 
     error NotAtRound(Round required, Round current);
 
+    error RoleChangeNotAllowed(Round current);
+
     /// @notice Hash of the StoffelLang program to be executed by MPC nodes
     /// @dev Used to verify the correct program is being run off-chain
     bytes32 internal stoffelProgramHash;
@@ -218,6 +220,12 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     function resetCoordinator() external onlyRole(DESIGNATED_PARTY_ROLE) {
         super._resetInputManager();
         _resetCoordinator();
+    }
+
+    function _beforeRoleChange() internal view override {
+        if (round != Round.ProgramFinished) {
+            revert RoleChangeNotAllowed(round);
+        }
     }
 
     /// @notice Initiates the preprocessing phase of the MPC computation

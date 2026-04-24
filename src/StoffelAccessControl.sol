@@ -42,6 +42,9 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
 
     error NotEnoughMPCParties(uint256 current, uint256 required);
 
+    /// @notice Hook called before any public role change; override to add round-based guards
+    function _beforeRoleChange() internal virtual {}
+
     /// @notice Initializes the access control with party count and threshold
     /// @param _t Fault tolerance threshold
     /// @param initialMpcNodes Array of addresses to be granted PARTY_ROLE
@@ -98,6 +101,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         override(AccessControl, IAccessControl, IStoffelAccessControl)
         onlyRole(DESIGNATED_PARTY_ROLE)
     {
+        _beforeRoleChange();
         _grantRole(role, account);
     }
 
@@ -122,6 +126,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         override(AccessControl, IAccessControl, IStoffelAccessControl)
         onlyRole(DESIGNATED_PARTY_ROLE)
     {
+        _beforeRoleChange();
         _revokeRole(role, account);
     }
 
@@ -130,6 +135,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     /// @param account The address renouncing the role (must be msg.sender)
     /// @dev Inherited from AccessControl, allows self-removal from roles
     function renounceRole(bytes32 role, address account) public override(AccessControl, IAccessControl) {
+        _beforeRoleChange();
         super.renounceRole(role, account);
     }
 

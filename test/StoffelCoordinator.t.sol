@@ -42,8 +42,12 @@ contract StoffelCoordinatorTest is Test {
     }
 
     function test_startPreprocessing_revertsIfNotEnoughParties() public {
-        // Revoke one party so the count (3) falls below n=4
+        // Run to ProgramFinished so role changes are allowed, then revoke one party
+        _advanceToFinalize();
+        coordinator.finalize();
         coordinator.revokeRole(coordinator.PARTY_ROLE(), party3);
+        coordinator.resetCoordinator();
+
         vm.expectRevert(abi.encodeWithSelector(StoffelAccessControl.NotEnoughMPCParties.selector, 3, 4));
         coordinator.startPreprocessing();
     }
@@ -91,11 +95,11 @@ contract StoffelCoordinatorTest is Test {
         assertEq(coordinator.creationTime(), newTimestamp);
         assertEq(coordinator.creationBlock(), newBlock);
 
-        // Output client roles revoked on reset — sendOutputShares is rejected in the next run
+        // Output client roles persist across reset — sendOutputShares works with fresh state
+        assertTrue(coordinator.hasRole(coordinator.OUTPUT_CLIENT_ROLE(), client1));
         _advanceToFinalize();
 
         vm.prank(party1);
-        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.OutputClientNotRegistered.selector, client1));
         coordinator.sendOutputShares(client1, abi.encode("share_after_reset"));
 
         // Previously reserved indices are available again
@@ -122,24 +126,26 @@ contract StoffelCoordinatorTest is Test {
         assertEq(uint256(coordinator.round()), uint256(StoffelCoordinator.Round.ProgramFinished));
     }
 
-    function test_revokeRole_emitsEventAndComputationCompletesAfterRevocation() public {
+    function test_revokeRole_revertsIfProgramIsExecuting() public {
+        bytes32 partyRole = coordinator.PARTY_ROLE();
         coordinator.startPreprocessing();
 
-        // Revoke party1 during Preprocessing — not Idle
-        vm.expectEmit(true, true, true, true);
-        emit IAccessControl.RoleRevoked(coordinator.PARTY_ROLE(), party1, address(this));
-        coordinator.revokeRole(coordinator.PARTY_ROLE(), party1);
+        vm.expectRevert(
+            abi.encodeWithSelector(StoffelCoordinator.RoleChangeNotAllowed.selector, StoffelCoordinator.Round.Preprocessing)
+        );
+        coordinator.revokeRole(partyRole, party1);
+    }
 
-        assertFalse(coordinator.hasRole(coordinator.PARTY_ROLE(), party1));
-
-        // Computation continues to completion despite the revocation
-        coordinator.reserveInputMasks();
-        coordinator.collectInputs();
-        coordinator.startMpc();
-        coordinator.sendOutputs();
+    function test_revokeRole_succeedsWhenProgramFinished() public {
+        bytes32 partyRole = coordinator.PARTY_ROLE();
+        _advanceToFinalize();
         coordinator.finalize();
 
-        assertEq(uint256(coordinator.round()), uint256(StoffelCoordinator.Round.ProgramFinished));
+        vm.expectEmit(true, true, true, true);
+        emit IAccessControl.RoleRevoked(partyRole, party1, address(this));
+        coordinator.revokeRole(partyRole, party1);
+
+        assertFalse(coordinator.hasRole(partyRole, party1));
     }
 
     /// @notice Advances the coordinator through all rounds up to OutputDistribution, ready to finalize

@@ -128,6 +128,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
         for (uint256 i = 0; i < initialOutputClients.length; i++) {
             _grantRole(OUTPUT_CLIENT_ROLE, initialOutputClients[i]);
+            outputs[initialOutputClients[i]].shares = new bytes[](n);
         }
         outputClients = initialOutputClients;
 
@@ -148,14 +149,13 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
             delete reservedInputIndices[i];
         }
 
-        // Properly clear state and revoke roles for all output clients
         for (uint256 i = 0; i < nOutputClients; i++) {
             address client = outputClients[i];
             for (uint256 j = 0; j < nParties; j++) {
                 delete outputs[client].sharesReceived[parties[j]];
             }
             delete outputs[client];
-            _revokeRole(OUTPUT_CLIENT_ROLE, client);
+            outputs[client].shares = new bytes[](n);
         }
 
         nReservedIndices = 0;
@@ -240,35 +240,19 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
 
         Output storage output = outputs[client];
 
-        // Output storage is initialized lazily on first share receipt to avoid iterating over all
-        // output clients at coordinator initialization.
-        if (output.shares.length == 0) {
-            output.shares = new bytes[](n);
-            output.nShares = 0;
-
-            address[] memory parties = getRoleMembers(PARTY_ROLE);
-            uint256 nParties = getRoleMemberCount(PARTY_ROLE);
-            for (uint256 j = 0; j < nParties; j++) {
-                output.sharesReceived[parties[j]] = false;
-            }
-        }
-
-        uint256 nShares = output.nShares;
-
         if (output.sharesReceived[msg.sender]) {
             revert AlreadyReceivedOutputShares(client, msg.sender);
         }
         // more than n output share messages are never stored, since there are only n parties
-        require(nShares < n, "BUG: ALREADY RECEIVED SHARES FROM N PARTIES, TOO MANY CLIENTS");
+        require(output.nShares < n, "BUG: ALREADY RECEIVED SHARES FROM N PARTIES, TOO MANY CLIENTS");
 
         output.sharesReceived[msg.sender] = true;
-        output.shares[nShares] = shares;
+        output.shares[output.nShares] = shares;
         output.nShares += 1;
-        nShares += 1;
 
-        if (nShares >= 2 * t + 1) {
-            bytes[] memory sentShares = new bytes[](nShares);
-            for (uint256 i = 0; i < nShares; i++) {
+        if (output.nShares >= 2 * t + 1) {
+            bytes[] memory sentShares = new bytes[](output.nShares);
+            for (uint256 i = 0; i < output.nShares; i++) {
                 sentShares[i] = output.shares[i];
             }
             emit EnoughOutputShares(client, sentShares);
