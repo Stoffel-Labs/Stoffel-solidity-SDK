@@ -17,9 +17,10 @@ interface StoffelCoordinator {
     error NotAnExistingParty(address account);
     error NotAtRound(Round required, Round current);
     error NotEnoughMPCParties(uint256 current, uint256 required);
+    error OutputClientNotRegistered(address client);
     error OwnableInvalidOwner(address owner);
     error OwnableUnauthorizedAccount(address account);
-    error TooManyOutputClients();
+    error RoleChangeNotAllowed(Round current);
     error ZeroMaskedInput(address client);
 
     event CoordinatorInitialized(address coordinator, uint256 timeofInitialization, uint256 creationBlock, address designatedParty);
@@ -1075,6 +1076,17 @@ interface StoffelCoordinator {
   },
   {
     "type": "error",
+    "name": "OutputClientNotRegistered",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "OwnableInvalidOwner",
     "inputs": [
       {
@@ -1097,8 +1109,14 @@ interface StoffelCoordinator {
   },
   {
     "type": "error",
-    "name": "TooManyOutputClients",
-    "inputs": []
+    "name": "RoleChangeNotAllowed",
+    "inputs": [
+      {
+        "name": "current",
+        "type": "uint8",
+        "internalType": "enum StoffelCoordinator.Round"
+      }
+    ]
   },
   {
     "type": "error",
@@ -2368,6 +2386,89 @@ error NotEnoughMPCParties(uint256 current, uint256 required);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Custom error with signature `OutputClientNotRegistered(address)` and selector `0x5c9f71ac`.
+```solidity
+error OutputClientNotRegistered(address client);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct OutputClientNotRegistered {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[doc(hidden)]
+        #[allow(dead_code)]
+        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
+        #[doc(hidden)]
+        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
+        #[cfg(test)]
+        #[allow(dead_code, unreachable_patterns)]
+        fn _type_assertion(
+            _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+        ) {
+            match _t {
+                alloy_sol_types::private::AssertTypeEq::<
+                    <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                >(_) => {}
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<OutputClientNotRegistered>
+        for UnderlyingRustTuple<'_> {
+            fn from(value: OutputClientNotRegistered) -> Self {
+                (value.client,)
+            }
+        }
+        #[automatically_derived]
+        #[doc(hidden)]
+        impl ::core::convert::From<UnderlyingRustTuple<'_>>
+        for OutputClientNotRegistered {
+            fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                Self { client: tuple.0 }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolError for OutputClientNotRegistered {
+            type Parameters<'a> = UnderlyingSolTuple<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "OutputClientNotRegistered(address)";
+            const SELECTOR: [u8; 4] = [92u8, 159u8, 113u8, 172u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.client,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
+                <Self::Parameters<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(Self::new)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `OwnableInvalidOwner(address)` and selector `0x1e4fbdf7`.
 ```solidity
 error OwnableInvalidOwner(address owner);
@@ -2532,13 +2633,16 @@ error OwnableUnauthorizedAccount(address account);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Custom error with signature `TooManyOutputClients()` and selector `0xec12a4c9`.
+    /**Custom error with signature `RoleChangeNotAllowed(uint8)` and selector `0x63018054`.
 ```solidity
-error TooManyOutputClients();
+error RoleChangeNotAllowed(Round current);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct TooManyOutputClients;
+    pub struct RoleChangeNotAllowed {
+        #[allow(missing_docs)]
+        pub current: <Round as alloy::sol_types::SolType>::RustType,
+    }
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -2549,9 +2653,9 @@ error TooManyOutputClients();
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
         #[allow(dead_code)]
-        type UnderlyingSolTuple<'a> = ();
+        type UnderlyingSolTuple<'a> = (Round,);
         #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = ();
+        type UnderlyingRustTuple<'a> = (<Round as alloy::sol_types::SolType>::RustType,);
         #[cfg(test)]
         #[allow(dead_code, unreachable_patterns)]
         fn _type_assertion(
@@ -2565,26 +2669,26 @@ error TooManyOutputClients();
         }
         #[automatically_derived]
         #[doc(hidden)]
-        impl ::core::convert::From<TooManyOutputClients> for UnderlyingRustTuple<'_> {
-            fn from(value: TooManyOutputClients) -> Self {
-                ()
+        impl ::core::convert::From<RoleChangeNotAllowed> for UnderlyingRustTuple<'_> {
+            fn from(value: RoleChangeNotAllowed) -> Self {
+                (value.current,)
             }
         }
         #[automatically_derived]
         #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple<'_>> for TooManyOutputClients {
+        impl ::core::convert::From<UnderlyingRustTuple<'_>> for RoleChangeNotAllowed {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self
+                Self { current: tuple.0 }
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolError for TooManyOutputClients {
+        impl alloy_sol_types::SolError for RoleChangeNotAllowed {
             type Parameters<'a> = UnderlyingSolTuple<'a>;
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "TooManyOutputClients()";
-            const SELECTOR: [u8; 4] = [236u8, 18u8, 164u8, 201u8];
+            const SIGNATURE: &'static str = "RoleChangeNotAllowed(uint8)";
+            const SELECTOR: [u8; 4] = [99u8, 1u8, 128u8, 84u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -2593,7 +2697,7 @@ error TooManyOutputClients();
             }
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
-                ()
+                (<Round as alloy_sol_types::SolType>::tokenize(&self.current),)
             }
             #[inline]
             fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
@@ -11209,11 +11313,13 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         NotEnoughMPCParties(NotEnoughMPCParties),
         #[allow(missing_docs)]
+        OutputClientNotRegistered(OutputClientNotRegistered),
+        #[allow(missing_docs)]
         OwnableInvalidOwner(OwnableInvalidOwner),
         #[allow(missing_docs)]
         OwnableUnauthorizedAccount(OwnableUnauthorizedAccount),
         #[allow(missing_docs)]
-        TooManyOutputClients(TooManyOutputClients),
+        RoleChangeNotAllowed(RoleChangeNotAllowed),
         #[allow(missing_docs)]
         ZeroMaskedInput(ZeroMaskedInput),
     }
@@ -11231,6 +11337,8 @@ function transferOwnership(address newOwner) external;
             [30u8, 79u8, 189u8, 247u8],
             [58u8, 35u8, 98u8, 104u8],
             [79u8, 95u8, 191u8, 195u8],
+            [92u8, 159u8, 113u8, 172u8],
+            [99u8, 1u8, 128u8, 84u8],
             [102u8, 151u8, 178u8, 50u8],
             [104u8, 103u8, 161u8, 112u8],
             [111u8, 175u8, 159u8, 5u8],
@@ -11239,7 +11347,6 @@ function transferOwnership(address newOwner) external;
             [191u8, 162u8, 23u8, 216u8],
             [195u8, 21u8, 160u8, 245u8],
             [226u8, 81u8, 125u8, 63u8],
-            [236u8, 18u8, 164u8, 201u8],
             [255u8, 171u8, 186u8, 231u8],
         ];
         /// The names of the variants in the same order as `SELECTORS`.
@@ -11250,6 +11357,8 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(OwnableInvalidOwner),
             ::core::stringify!(NotEnoughMPCParties),
             ::core::stringify!(AlreadySubmittedInputs),
+            ::core::stringify!(OutputClientNotRegistered),
+            ::core::stringify!(RoleChangeNotAllowed),
             ::core::stringify!(AccessControlBadConfirmation),
             ::core::stringify!(IndexOutOfBounds),
             ::core::stringify!(NoIndicesReserved),
@@ -11258,7 +11367,6 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(NotAtRound),
             ::core::stringify!(ClientAlreadyReservedIndex),
             ::core::stringify!(AccessControlUnauthorizedAccount),
-            ::core::stringify!(TooManyOutputClients),
             ::core::stringify!(IndexNotReserved),
         ];
         /// The signatures in the same order as `SELECTORS`.
@@ -11269,6 +11377,8 @@ function transferOwnership(address newOwner) external;
             <OwnableInvalidOwner as alloy_sol_types::SolError>::SIGNATURE,
             <NotEnoughMPCParties as alloy_sol_types::SolError>::SIGNATURE,
             <AlreadySubmittedInputs as alloy_sol_types::SolError>::SIGNATURE,
+            <OutputClientNotRegistered as alloy_sol_types::SolError>::SIGNATURE,
+            <RoleChangeNotAllowed as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlBadConfirmation as alloy_sol_types::SolError>::SIGNATURE,
             <IndexOutOfBounds as alloy_sol_types::SolError>::SIGNATURE,
             <NoIndicesReserved as alloy_sol_types::SolError>::SIGNATURE,
@@ -11277,7 +11387,6 @@ function transferOwnership(address newOwner) external;
             <NotAtRound as alloy_sol_types::SolError>::SIGNATURE,
             <ClientAlreadyReservedIndex as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlUnauthorizedAccount as alloy_sol_types::SolError>::SIGNATURE,
-            <TooManyOutputClients as alloy_sol_types::SolError>::SIGNATURE,
             <IndexNotReserved as alloy_sol_types::SolError>::SIGNATURE,
         ];
         /// Returns the signature for the given selector, if known.
@@ -11305,7 +11414,7 @@ function transferOwnership(address newOwner) external;
     impl alloy_sol_types::SolInterface for StoffelCoordinatorErrors {
         const NAME: &'static str = "StoffelCoordinatorErrors";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 16usize;
+        const COUNT: usize = 17usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -11345,14 +11454,17 @@ function transferOwnership(address newOwner) external;
                 Self::NotEnoughMPCParties(_) => {
                     <NotEnoughMPCParties as alloy_sol_types::SolError>::SELECTOR
                 }
+                Self::OutputClientNotRegistered(_) => {
+                    <OutputClientNotRegistered as alloy_sol_types::SolError>::SELECTOR
+                }
                 Self::OwnableInvalidOwner(_) => {
                     <OwnableInvalidOwner as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::OwnableUnauthorizedAccount(_) => {
                     <OwnableUnauthorizedAccount as alloy_sol_types::SolError>::SELECTOR
                 }
-                Self::TooManyOutputClients(_) => {
-                    <TooManyOutputClients as alloy_sol_types::SolError>::SELECTOR
+                Self::RoleChangeNotAllowed(_) => {
+                    <RoleChangeNotAllowed as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::ZeroMaskedInput(_) => {
                     <ZeroMaskedInput as alloy_sol_types::SolError>::SELECTOR
@@ -11443,6 +11555,28 @@ function transferOwnership(address newOwner) external;
                     AlreadySubmittedInputs
                 },
                 {
+                    fn OutputClientNotRegistered(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <OutputClientNotRegistered as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelCoordinatorErrors::OutputClientNotRegistered)
+                    }
+                    OutputClientNotRegistered
+                },
+                {
+                    fn RoleChangeNotAllowed(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <RoleChangeNotAllowed as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelCoordinatorErrors::RoleChangeNotAllowed)
+                    }
+                    RoleChangeNotAllowed
+                },
+                {
                     fn AccessControlBadConfirmation(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
@@ -11529,17 +11663,6 @@ function transferOwnership(address newOwner) external;
                             )
                     }
                     AccessControlUnauthorizedAccount
-                },
-                {
-                    fn TooManyOutputClients(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
-                        <TooManyOutputClients as alloy_sol_types::SolError>::abi_decode_raw(
-                                data,
-                            )
-                            .map(StoffelCoordinatorErrors::TooManyOutputClients)
-                    }
-                    TooManyOutputClients
                 },
                 {
                     fn IndexNotReserved(
@@ -11639,6 +11762,28 @@ function transferOwnership(address newOwner) external;
                     AlreadySubmittedInputs
                 },
                 {
+                    fn OutputClientNotRegistered(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <OutputClientNotRegistered as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelCoordinatorErrors::OutputClientNotRegistered)
+                    }
+                    OutputClientNotRegistered
+                },
+                {
+                    fn RoleChangeNotAllowed(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
+                        <RoleChangeNotAllowed as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelCoordinatorErrors::RoleChangeNotAllowed)
+                    }
+                    RoleChangeNotAllowed
+                },
+                {
                     fn AccessControlBadConfirmation(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
@@ -11729,17 +11874,6 @@ function transferOwnership(address newOwner) external;
                     AccessControlUnauthorizedAccount
                 },
                 {
-                    fn TooManyOutputClients(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
-                        <TooManyOutputClients as alloy_sol_types::SolError>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelCoordinatorErrors::TooManyOutputClients)
-                    }
-                    TooManyOutputClients
-                },
-                {
                     fn IndexNotReserved(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorErrors> {
@@ -11822,6 +11956,11 @@ function transferOwnership(address newOwner) external;
                         inner,
                     )
                 }
+                Self::OutputClientNotRegistered(inner) => {
+                    <OutputClientNotRegistered as alloy_sol_types::SolError>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::OwnableInvalidOwner(inner) => {
                     <OwnableInvalidOwner as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
@@ -11832,8 +11971,8 @@ function transferOwnership(address newOwner) external;
                         inner,
                     )
                 }
-                Self::TooManyOutputClients(inner) => {
-                    <TooManyOutputClients as alloy_sol_types::SolError>::abi_encoded_size(
+                Self::RoleChangeNotAllowed(inner) => {
+                    <RoleChangeNotAllowed as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -11916,6 +12055,12 @@ function transferOwnership(address newOwner) external;
                         out,
                     )
                 }
+                Self::OutputClientNotRegistered(inner) => {
+                    <OutputClientNotRegistered as alloy_sol_types::SolError>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
                 Self::OwnableInvalidOwner(inner) => {
                     <OwnableInvalidOwner as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
@@ -11928,8 +12073,8 @@ function transferOwnership(address newOwner) external;
                         out,
                     )
                 }
-                Self::TooManyOutputClients(inner) => {
-                    <TooManyOutputClients as alloy_sol_types::SolError>::abi_encode_raw(
+                Self::RoleChangeNotAllowed(inner) => {
+                    <RoleChangeNotAllowed as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )

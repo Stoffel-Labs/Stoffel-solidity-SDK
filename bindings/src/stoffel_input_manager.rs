@@ -14,7 +14,7 @@ interface StoffelInputManager {
     error NoIndicesReserved(address client);
     error NotAnExistingParty(address account);
     error NotEnoughMPCParties(uint256 current, uint256 required);
-    error TooManyOutputClients();
+    error OutputClientNotRegistered(address client);
     error ZeroMaskedInput(address client);
 
     event EnoughOutputShares(address indexed client, bytes[] shares);
@@ -44,7 +44,6 @@ interface StoffelInputManager {
     function renounceRole(bytes32 role, address account) external;
     function reserveMaskIndex(uint256 i) external;
     function revokeRole(bytes32 role, address account) external;
-    function sendOutputShares(address client, bytes memory shares) external;
     function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }
@@ -349,24 +348,6 @@ interface StoffelInputManager {
         "name": "account",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "sendOutputShares",
-    "inputs": [
-      {
-        "name": "client",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "shares",
-        "type": "bytes",
-        "internalType": "bytes"
       }
     ],
     "outputs": [],
@@ -748,8 +729,14 @@ interface StoffelInputManager {
   },
   {
     "type": "error",
-    "name": "TooManyOutputClients",
-    "inputs": []
+    "name": "OutputClientNotRegistered",
+    "inputs": [
+      {
+        "name": "client",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1794,13 +1781,16 @@ error NotEnoughMPCParties(uint256 current, uint256 required);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Custom error with signature `TooManyOutputClients()` and selector `0xec12a4c9`.
+    /**Custom error with signature `OutputClientNotRegistered(address)` and selector `0x5c9f71ac`.
 ```solidity
-error TooManyOutputClients();
+error OutputClientNotRegistered(address client);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct TooManyOutputClients;
+    pub struct OutputClientNotRegistered {
+        #[allow(missing_docs)]
+        pub client: alloy::sol_types::private::Address,
+    }
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -1811,9 +1801,9 @@ error TooManyOutputClients();
         use alloy::sol_types as alloy_sol_types;
         #[doc(hidden)]
         #[allow(dead_code)]
-        type UnderlyingSolTuple<'a> = ();
+        type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Address,);
         #[doc(hidden)]
-        type UnderlyingRustTuple<'a> = ();
+        type UnderlyingRustTuple<'a> = (alloy::sol_types::private::Address,);
         #[cfg(test)]
         #[allow(dead_code, unreachable_patterns)]
         fn _type_assertion(
@@ -1827,26 +1817,28 @@ error TooManyOutputClients();
         }
         #[automatically_derived]
         #[doc(hidden)]
-        impl ::core::convert::From<TooManyOutputClients> for UnderlyingRustTuple<'_> {
-            fn from(value: TooManyOutputClients) -> Self {
-                ()
+        impl ::core::convert::From<OutputClientNotRegistered>
+        for UnderlyingRustTuple<'_> {
+            fn from(value: OutputClientNotRegistered) -> Self {
+                (value.client,)
             }
         }
         #[automatically_derived]
         #[doc(hidden)]
-        impl ::core::convert::From<UnderlyingRustTuple<'_>> for TooManyOutputClients {
+        impl ::core::convert::From<UnderlyingRustTuple<'_>>
+        for OutputClientNotRegistered {
             fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                Self
+                Self { client: tuple.0 }
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolError for TooManyOutputClients {
+        impl alloy_sol_types::SolError for OutputClientNotRegistered {
             type Parameters<'a> = UnderlyingSolTuple<'a>;
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "TooManyOutputClients()";
-            const SELECTOR: [u8; 4] = [236u8, 18u8, 164u8, 201u8];
+            const SIGNATURE: &'static str = "OutputClientNotRegistered(address)";
+            const SELECTOR: [u8; 4] = [92u8, 159u8, 113u8, 172u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -1855,7 +1847,11 @@ error TooManyOutputClients();
             }
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
-                ()
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.client,
+                    ),
+                )
             }
             #[inline]
             fn abi_decode_raw_validate(data: &[u8]) -> alloy_sol_types::Result<Self> {
@@ -5722,171 +5718,6 @@ function revokeRole(bytes32 role, address account) external;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `sendOutputShares(address,bytes)` and selector `0xede69216`.
-```solidity
-function sendOutputShares(address client, bytes memory shares) external;
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct sendOutputSharesCall {
-        #[allow(missing_docs)]
-        pub client: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
-        pub shares: alloy::sol_types::private::Bytes,
-    }
-    ///Container type for the return parameters of the [`sendOutputShares(address,bytes)`](sendOutputSharesCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct sendOutputSharesReturn {}
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Address,
-                alloy::sol_types::sol_data::Bytes,
-            );
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::Address,
-                alloy::sol_types::private::Bytes,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<sendOutputSharesCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: sendOutputSharesCall) -> Self {
-                    (value.client, value.shares)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for sendOutputSharesCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {
-                        client: tuple.0,
-                        shares: tuple.1,
-                    }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<sendOutputSharesReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: sendOutputSharesReturn) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for sendOutputSharesReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
-                }
-            }
-        }
-        impl sendOutputSharesReturn {
-            fn _tokenize(
-                &self,
-            ) -> <sendOutputSharesCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
-                ()
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for sendOutputSharesCall {
-            type Parameters<'a> = (
-                alloy::sol_types::sol_data::Address,
-                alloy::sol_types::sol_data::Bytes,
-            );
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = sendOutputSharesReturn;
-            type ReturnTuple<'a> = ();
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "sendOutputShares(address,bytes)";
-            const SELECTOR: [u8; 4] = [237u8, 230u8, 146u8, 22u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        &self.client,
-                    ),
-                    <alloy::sol_types::sol_data::Bytes as alloy_sol_types::SolType>::tokenize(
-                        &self.shares,
-                    ),
-                )
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                sendOutputSharesReturn::_tokenize(ret)
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(Into::into)
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(Into::into)
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `submitMaskedInput(uint256,uint256)` and selector `0x0bda81cf`.
 ```solidity
 function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
@@ -6248,8 +6079,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         revokeRole(revokeRoleCall),
         #[allow(missing_docs)]
-        sendOutputShares(sendOutputSharesCall),
-        #[allow(missing_docs)]
         submitMaskedInput(submitMaskedInputCall),
         #[allow(missing_docs)]
         supportsInterface(supportsInterfaceCall),
@@ -6281,7 +6110,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             [163u8, 36u8, 106u8, 211u8],
             [202u8, 21u8, 200u8, 115u8],
             [213u8, 71u8, 116u8, 31u8],
-            [237u8, 230u8, 146u8, 22u8],
             [252u8, 120u8, 178u8, 232u8],
         ];
         /// The names of the variants in the same order as `SELECTORS`.
@@ -6305,7 +6133,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             ::core::stringify!(getRoleMembers),
             ::core::stringify!(getRoleMemberCount),
             ::core::stringify!(revokeRole),
-            ::core::stringify!(sendOutputShares),
             ::core::stringify!(isParty),
         ];
         /// The signatures in the same order as `SELECTORS`.
@@ -6329,7 +6156,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             <getRoleMembersCall as alloy_sol_types::SolCall>::SIGNATURE,
             <getRoleMemberCountCall as alloy_sol_types::SolCall>::SIGNATURE,
             <revokeRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <sendOutputSharesCall as alloy_sol_types::SolCall>::SIGNATURE,
             <isPartyCall as alloy_sol_types::SolCall>::SIGNATURE,
         ];
         /// Returns the signature for the given selector, if known.
@@ -6357,7 +6183,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     impl alloy_sol_types::SolInterface for StoffelInputManagerCalls {
         const NAME: &'static str = "StoffelInputManagerCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 21usize;
+        const COUNT: usize = 20usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -6410,9 +6236,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 }
                 Self::revokeRole(_) => {
                     <revokeRoleCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::sendOutputShares(_) => {
-                    <sendOutputSharesCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::submitMaskedInput(_) => {
                     <submitMaskedInputCall as alloy_sol_types::SolCall>::SELECTOR
@@ -6641,17 +6464,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerCalls::revokeRole)
                     }
                     revokeRole
-                },
-                {
-                    fn sendOutputShares(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
-                        <sendOutputSharesCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(StoffelInputManagerCalls::sendOutputShares)
-                    }
-                    sendOutputShares
                 },
                 {
                     fn isParty(
@@ -6892,17 +6704,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     revokeRole
                 },
                 {
-                    fn sendOutputShares(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
-                        <sendOutputSharesCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelInputManagerCalls::sendOutputShares)
-                    }
-                    sendOutputShares
-                },
-                {
                     fn isParty(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerCalls> {
@@ -7004,11 +6805,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 }
                 Self::revokeRole(inner) => {
                     <revokeRoleCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
-                }
-                Self::sendOutputShares(inner) => {
-                    <sendOutputSharesCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
                 }
                 Self::submitMaskedInput(inner) => {
                     <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_encoded_size(
@@ -7127,12 +6923,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                         out,
                     )
                 }
-                Self::sendOutputShares(inner) => {
-                    <sendOutputSharesCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
                 Self::submitMaskedInput(inner) => {
                     <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
@@ -7176,7 +6966,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         NotEnoughMPCParties(NotEnoughMPCParties),
         #[allow(missing_docs)]
-        TooManyOutputClients(TooManyOutputClients),
+        OutputClientNotRegistered(OutputClientNotRegistered),
         #[allow(missing_docs)]
         ZeroMaskedInput(ZeroMaskedInput),
     }
@@ -7192,6 +6982,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             [22u8, 146u8, 60u8, 234u8],
             [58u8, 35u8, 98u8, 104u8],
             [79u8, 95u8, 191u8, 195u8],
+            [92u8, 159u8, 113u8, 172u8],
             [102u8, 151u8, 178u8, 50u8],
             [104u8, 103u8, 161u8, 112u8],
             [111u8, 175u8, 159u8, 5u8],
@@ -7199,7 +6990,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             [171u8, 220u8, 224u8, 106u8],
             [195u8, 21u8, 160u8, 245u8],
             [226u8, 81u8, 125u8, 63u8],
-            [236u8, 18u8, 164u8, 201u8],
             [255u8, 171u8, 186u8, 231u8],
         ];
         /// The names of the variants in the same order as `SELECTORS`.
@@ -7208,6 +6998,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             ::core::stringify!(ZeroMaskedInput),
             ::core::stringify!(NotEnoughMPCParties),
             ::core::stringify!(AlreadySubmittedInputs),
+            ::core::stringify!(OutputClientNotRegistered),
             ::core::stringify!(AccessControlBadConfirmation),
             ::core::stringify!(IndexOutOfBounds),
             ::core::stringify!(NoIndicesReserved),
@@ -7215,7 +7006,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             ::core::stringify!(NotAnExistingParty),
             ::core::stringify!(ClientAlreadyReservedIndex),
             ::core::stringify!(AccessControlUnauthorizedAccount),
-            ::core::stringify!(TooManyOutputClients),
             ::core::stringify!(IndexNotReserved),
         ];
         /// The signatures in the same order as `SELECTORS`.
@@ -7224,6 +7014,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             <ZeroMaskedInput as alloy_sol_types::SolError>::SIGNATURE,
             <NotEnoughMPCParties as alloy_sol_types::SolError>::SIGNATURE,
             <AlreadySubmittedInputs as alloy_sol_types::SolError>::SIGNATURE,
+            <OutputClientNotRegistered as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlBadConfirmation as alloy_sol_types::SolError>::SIGNATURE,
             <IndexOutOfBounds as alloy_sol_types::SolError>::SIGNATURE,
             <NoIndicesReserved as alloy_sol_types::SolError>::SIGNATURE,
@@ -7231,7 +7022,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             <NotAnExistingParty as alloy_sol_types::SolError>::SIGNATURE,
             <ClientAlreadyReservedIndex as alloy_sol_types::SolError>::SIGNATURE,
             <AccessControlUnauthorizedAccount as alloy_sol_types::SolError>::SIGNATURE,
-            <TooManyOutputClients as alloy_sol_types::SolError>::SIGNATURE,
             <IndexNotReserved as alloy_sol_types::SolError>::SIGNATURE,
         ];
         /// Returns the signature for the given selector, if known.
@@ -7296,8 +7086,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 Self::NotEnoughMPCParties(_) => {
                     <NotEnoughMPCParties as alloy_sol_types::SolError>::SELECTOR
                 }
-                Self::TooManyOutputClients(_) => {
-                    <TooManyOutputClients as alloy_sol_types::SolError>::SELECTOR
+                Self::OutputClientNotRegistered(_) => {
+                    <OutputClientNotRegistered as alloy_sol_types::SolError>::SELECTOR
                 }
                 Self::ZeroMaskedInput(_) => {
                     <ZeroMaskedInput as alloy_sol_types::SolError>::SELECTOR
@@ -7364,6 +7154,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerErrors::AlreadySubmittedInputs)
                     }
                     AlreadySubmittedInputs
+                },
+                {
+                    fn OutputClientNotRegistered(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <OutputClientNotRegistered as alloy_sol_types::SolError>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::OutputClientNotRegistered)
+                    }
+                    OutputClientNotRegistered
                 },
                 {
                     fn AccessControlBadConfirmation(
@@ -7445,17 +7246,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     AccessControlUnauthorizedAccount
                 },
                 {
-                    fn TooManyOutputClients(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
-                        <TooManyOutputClients as alloy_sol_types::SolError>::abi_decode_raw(
-                                data,
-                            )
-                            .map(StoffelInputManagerErrors::TooManyOutputClients)
-                    }
-                    TooManyOutputClients
-                },
-                {
                     fn IndexNotReserved(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
@@ -7529,6 +7319,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(StoffelInputManagerErrors::AlreadySubmittedInputs)
                     }
                     AlreadySubmittedInputs
+                },
+                {
+                    fn OutputClientNotRegistered(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
+                        <OutputClientNotRegistered as alloy_sol_types::SolError>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelInputManagerErrors::OutputClientNotRegistered)
+                    }
+                    OutputClientNotRegistered
                 },
                 {
                     fn AccessControlBadConfirmation(
@@ -7610,17 +7411,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     AccessControlUnauthorizedAccount
                 },
                 {
-                    fn TooManyOutputClients(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
-                        <TooManyOutputClients as alloy_sol_types::SolError>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelInputManagerErrors::TooManyOutputClients)
-                    }
-                    TooManyOutputClients
-                },
-                {
                     fn IndexNotReserved(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelInputManagerErrors> {
@@ -7700,8 +7490,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                         inner,
                     )
                 }
-                Self::TooManyOutputClients(inner) => {
-                    <TooManyOutputClients as alloy_sol_types::SolError>::abi_encoded_size(
+                Self::OutputClientNotRegistered(inner) => {
+                    <OutputClientNotRegistered as alloy_sol_types::SolError>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -7781,8 +7571,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                         out,
                     )
                 }
-                Self::TooManyOutputClients(inner) => {
-                    <TooManyOutputClients as alloy_sol_types::SolError>::abi_encode_raw(
+                Self::OutputClientNotRegistered(inner) => {
+                    <OutputClientNotRegistered as alloy_sol_types::SolError>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -8332,19 +8122,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             account: alloy::sol_types::private::Address,
         ) -> alloy_contract::SolCallBuilder<&P, revokeRoleCall, N> {
             self.call_builder(&revokeRoleCall { role, account })
-        }
-        ///Creates a new call builder for the [`sendOutputShares`] function.
-        pub fn sendOutputShares(
-            &self,
-            client: alloy::sol_types::private::Address,
-            shares: alloy::sol_types::private::Bytes,
-        ) -> alloy_contract::SolCallBuilder<&P, sendOutputSharesCall, N> {
-            self.call_builder(
-                &sendOutputSharesCall {
-                    client,
-                    shares,
-                },
-            )
         }
         ///Creates a new call builder for the [`submitMaskedInput`] function.
         pub fn submitMaskedInput(
