@@ -89,17 +89,17 @@ contract StoffelInputManagerTest is Test {
         coordinator.reserveMaskIndex(2);
 
         vm.prank(client1);
-        coordinator.submitMaskedInput(11111, 0);
+        coordinator.submitMaskedInput(hex"2B67", 0);
         vm.prank(client2);
-        coordinator.submitMaskedInput(22222, 1);
+        coordinator.submitMaskedInput(hex"56CE", 1);
         vm.prank(client3);
-        coordinator.submitMaskedInput(33333, 2);
+        coordinator.submitMaskedInput(hex"8235", 2);
     }
 
     function test_submitMaskedInput_revertsWithoutReservation() public {
         vm.prank(client1);
         vm.expectRevert();
-        coordinator.submitMaskedInput(12345, 0);
+        coordinator.submitMaskedInput(hex"3039", 0);
     }
 
     function test_submitMaskedInput_revertsZeroMaskedInput() public {
@@ -108,7 +108,7 @@ contract StoffelInputManagerTest is Test {
 
         vm.prank(client1);
         vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.ZeroMaskedInput.selector, client1));
-        coordinator.submitMaskedInput(0, 0);
+        coordinator.submitMaskedInput(hex"", 0);
     }
 
     function test_submitMaskedInput_revertsIndexNotReservedByCaller() public {
@@ -120,7 +120,7 @@ contract StoffelInputManagerTest is Test {
         // client2 tries to submit using client1's index
         vm.prank(client2);
         vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.IndexNotReserved.selector, client2, 0));
-        coordinator.submitMaskedInput(12345, 0);
+        coordinator.submitMaskedInput(hex"3039", 0);
     }
 
     function test_submitMaskedInput_revertsAlreadySubmitted() public {
@@ -128,11 +128,11 @@ contract StoffelInputManagerTest is Test {
         coordinator.reserveMaskIndex(0);
 
         vm.prank(client1);
-        coordinator.submitMaskedInput(12345, 0);
+        coordinator.submitMaskedInput(hex"3039", 0);
 
         vm.prank(client1);
         vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.AlreadySubmittedInputs.selector, client1));
-        coordinator.submitMaskedInput(31415, 0);
+        coordinator.submitMaskedInput(hex"7AB7", 0);
     }
 
     function test_baseNonceInitiallyZero() public view {

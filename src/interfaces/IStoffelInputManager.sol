@@ -19,5 +19,5 @@ interface IStoffelInputManager {
     /// @notice Submits a masked input using a previously reserved index
     /// @param maskedInput The masked input value (raw input + mask)
     /// @param reservedIndexed The index that was previously reserved
-    function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) external;
+    function submitMaskedInput(bytes calldata maskedInput, uint256 reservedIndexed) external;
 }

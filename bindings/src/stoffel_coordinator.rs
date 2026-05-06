@@ -31,7 +31,7 @@ interface StoffelCoordinator {
     event InputCollectionStarted(address executor, uint256 timeOfExecution);
     event InputMaskReservationStarted(address executor, uint256 timeOfExecution);
     event MPCStarted(address executor, uint256 timeOfExecution);
-    event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
+    event MaskedInputEvent(address client, bytes maskedInput, uint256 reservedIndex);
     event OutputSendingStarted(address executor, uint256 timeOfExecution);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event PreprocessingStarted(address designatedParty, uint256 timeOfExecution);
@@ -71,7 +71,7 @@ interface StoffelCoordinator {
     function sendOutputs() external;
     function startMpc() external;
     function startPreprocessing() external;
-    function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
+    function submitMaskedInput(bytes memory maskedInput, uint256 reservedIndex) external;
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
     function transferOwnership(address newOwner) external;
 }
@@ -513,8 +513,8 @@ interface StoffelCoordinator {
     "inputs": [
       {
         "name": "maskedInput",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "bytes",
+        "internalType": "bytes"
       },
       {
         "name": "reservedIndex",
@@ -739,9 +739,9 @@ interface StoffelCoordinator {
       },
       {
         "name": "maskedInput",
-        "type": "uint256",
+        "type": "bytes",
         "indexed": false,
-        "internalType": "uint256"
+        "internalType": "bytes"
       },
       {
         "name": "reservedIndex",
@@ -3747,9 +3747,9 @@ event MPCStarted(address executor, uint256 timeOfExecution);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Event with signature `MaskedInputEvent(address,uint256,uint256)` and selector `0xb89addd937f44f902c849596641837cd7af2fcecef22d2a7866fdc1ad9c0ae2e`.
+    /**Event with signature `MaskedInputEvent(address,bytes,uint256)` and selector `0x56d03e5f1ebec3d4b4f9ded07e82c6bb6897c142cfbaf8dff8f9ef897ce4f75f`.
 ```solidity
-event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
+event MaskedInputEvent(address client, bytes maskedInput, uint256 reservedIndex);
 ```*/
     #[allow(
         non_camel_case_types,
@@ -3762,7 +3762,7 @@ event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedInde
         #[allow(missing_docs)]
         pub client: alloy::sol_types::private::Address,
         #[allow(missing_docs)]
-        pub maskedInput: alloy::sol_types::private::primitives::aliases::U256,
+        pub maskedInput: alloy::sol_types::private::Bytes,
         #[allow(missing_docs)]
         pub reservedIndex: alloy::sol_types::private::primitives::aliases::U256,
     }
@@ -3778,18 +3778,19 @@ event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedInde
         impl alloy_sol_types::SolEvent for MaskedInputEvent {
             type DataTuple<'a> = (
                 alloy::sol_types::sol_data::Address,
-                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Uint<256>,
             );
             type DataToken<'a> = <Self::DataTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
             type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
-            const SIGNATURE: &'static str = "MaskedInputEvent(address,uint256,uint256)";
+            const SIGNATURE: &'static str = "MaskedInputEvent(address,bytes,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                184u8, 154u8, 221u8, 217u8, 55u8, 244u8, 79u8, 144u8, 44u8, 132u8, 149u8,
-                150u8, 100u8, 24u8, 55u8, 205u8, 122u8, 242u8, 252u8, 236u8, 239u8, 34u8,
-                210u8, 167u8, 134u8, 111u8, 220u8, 26u8, 217u8, 192u8, 174u8, 46u8,
+                86u8, 208u8, 62u8, 95u8, 30u8, 190u8, 195u8, 212u8, 180u8, 249u8, 222u8,
+                208u8, 126u8, 130u8, 198u8, 187u8, 104u8, 151u8, 193u8, 66u8, 207u8,
+                186u8, 248u8, 223u8, 248u8, 249u8, 239u8, 137u8, 124u8, 228u8, 247u8,
+                95u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -3825,9 +3826,9 @@ event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedInde
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         &self.client,
                     ),
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.maskedInput),
+                    <alloy::sol_types::sol_data::Bytes as alloy_sol_types::SolType>::tokenize(
+                        &self.maskedInput,
+                    ),
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.reservedIndex),
@@ -9371,19 +9372,19 @@ function startPreprocessing() external;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `submitMaskedInput(uint256,uint256)` and selector `0x0bda81cf`.
+    /**Function with signature `submitMaskedInput(bytes,uint256)` and selector `0x5648526c`.
 ```solidity
-function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
+function submitMaskedInput(bytes memory maskedInput, uint256 reservedIndex) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct submitMaskedInputCall {
         #[allow(missing_docs)]
-        pub maskedInput: alloy::sol_types::private::primitives::aliases::U256,
+        pub maskedInput: alloy::sol_types::private::Bytes,
         #[allow(missing_docs)]
         pub reservedIndex: alloy::sol_types::private::primitives::aliases::U256,
     }
-    ///Container type for the return parameters of the [`submitMaskedInput(uint256,uint256)`](submitMaskedInputCall) function.
+    ///Container type for the return parameters of the [`submitMaskedInput(bytes,uint256)`](submitMaskedInputCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct submitMaskedInputReturn {}
@@ -9399,12 +9400,12 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
             #[doc(hidden)]
             #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Uint<256>,
             );
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::Bytes,
                 alloy::sol_types::private::primitives::aliases::U256,
             );
             #[cfg(test)]
@@ -9482,7 +9483,7 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
         #[automatically_derived]
         impl alloy_sol_types::SolCall for submitMaskedInputCall {
             type Parameters<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Uint<256>,
             );
             type Token<'a> = <Self::Parameters<
@@ -9493,8 +9494,8 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "submitMaskedInput(uint256,uint256)";
-            const SELECTOR: [u8; 4] = [11u8, 218u8, 129u8, 207u8];
+            const SIGNATURE: &'static str = "submitMaskedInput(bytes,uint256)";
+            const SELECTOR: [u8; 4] = [86u8, 72u8, 82u8, 108u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -9504,9 +9505,9 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex) external;
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
                 (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.maskedInput),
+                    <alloy::sol_types::sol_data::Bytes as alloy_sol_types::SolType>::tokenize(
+                        &self.maskedInput,
+                    ),
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.reservedIndex),
@@ -9921,7 +9922,6 @@ function transferOwnership(address newOwner) external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [1u8, 255u8, 201u8, 167u8],
-            [11u8, 218u8, 129u8, 207u8],
             [19u8, 255u8, 109u8, 213u8],
             [20u8, 108u8, 165u8, 49u8],
             [23u8, 99u8, 69u8, 20u8],
@@ -9936,6 +9936,7 @@ function transferOwnership(address newOwner) external;
             [73u8, 242u8, 173u8, 160u8],
             [75u8, 142u8, 100u8, 136u8],
             [75u8, 178u8, 120u8, 243u8],
+            [86u8, 72u8, 82u8, 108u8],
             [88u8, 223u8, 13u8, 1u8],
             [92u8, 184u8, 107u8, 116u8],
             [113u8, 80u8, 24u8, 166u8],
@@ -9958,7 +9959,6 @@ function transferOwnership(address newOwner) external;
         /// The names of the variants in the same order as `SELECTORS`.
         pub const VARIANT_NAMES: &'static [&'static str] = &[
             ::core::stringify!(supportsInterface),
-            ::core::stringify!(submitMaskedInput),
             ::core::stringify!(isDesignatedParty),
             ::core::stringify!(round),
             ::core::stringify!(creationBlock),
@@ -9973,6 +9973,7 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(INPUT_CLIENT_ROLE),
             ::core::stringify!(sendOutputs),
             ::core::stringify!(finalize),
+            ::core::stringify!(submitMaskedInput),
             ::core::stringify!(OUTPUT_CLIENT_ROLE),
             ::core::stringify!(resetCoordinator),
             ::core::stringify!(renounceOwnership),
@@ -9995,7 +9996,6 @@ function transferOwnership(address newOwner) external;
         /// The signatures in the same order as `SELECTORS`.
         pub const SIGNATURES: &'static [&'static str] = &[
             <supportsInterfaceCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <submitMaskedInputCall as alloy_sol_types::SolCall>::SIGNATURE,
             <isDesignatedPartyCall as alloy_sol_types::SolCall>::SIGNATURE,
             <roundCall as alloy_sol_types::SolCall>::SIGNATURE,
             <creationBlockCall as alloy_sol_types::SolCall>::SIGNATURE,
@@ -10010,6 +10010,7 @@ function transferOwnership(address newOwner) external;
             <INPUT_CLIENT_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
             <sendOutputsCall as alloy_sol_types::SolCall>::SIGNATURE,
             <finalizeCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <submitMaskedInputCall as alloy_sol_types::SolCall>::SIGNATURE,
             <OUTPUT_CLIENT_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
             <resetCoordinatorCall as alloy_sol_types::SolCall>::SIGNATURE,
             <renounceOwnershipCall as alloy_sol_types::SolCall>::SIGNATURE,
@@ -10179,17 +10180,6 @@ function transferOwnership(address newOwner) external;
                     supportsInterface
                 },
                 {
-                    fn submitMaskedInput(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
-                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(StoffelCoordinatorCalls::submitMaskedInput)
-                    }
-                    submitMaskedInput
-                },
-                {
                     fn isDesignatedParty(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
@@ -10332,6 +10322,17 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorCalls::finalize)
                     }
                     finalize
+                },
+                {
+                    fn submitMaskedInput(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
+                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelCoordinatorCalls::submitMaskedInput)
+                    }
+                    submitMaskedInput
                 },
                 {
                     fn OUTPUT_CLIENT_ROLE(
@@ -10557,17 +10558,6 @@ function transferOwnership(address newOwner) external;
                     supportsInterface
                 },
                 {
-                    fn submitMaskedInput(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
-                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(StoffelCoordinatorCalls::submitMaskedInput)
-                    }
-                    submitMaskedInput
-                },
-                {
                     fn isDesignatedParty(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
@@ -10720,6 +10710,17 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorCalls::finalize)
                     }
                     finalize
+                },
+                {
+                    fn submitMaskedInput(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
+                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelCoordinatorCalls::submitMaskedInput)
+                    }
+                    submitMaskedInput
                 },
                 {
                     fn OUTPUT_CLIENT_ROLE(
@@ -12155,6 +12156,12 @@ function transferOwnership(address newOwner) external;
                 24u8, 8u8, 61u8, 111u8, 110u8, 9u8, 228u8, 149u8, 138u8, 89u8,
             ],
             [
+                86u8, 208u8, 62u8, 95u8, 30u8, 190u8, 195u8, 212u8, 180u8, 249u8, 222u8,
+                208u8, 126u8, 130u8, 198u8, 187u8, 104u8, 151u8, 193u8, 66u8, 207u8,
+                186u8, 248u8, 223u8, 248u8, 249u8, 239u8, 137u8, 124u8, 228u8, 247u8,
+                95u8,
+            ],
+            [
                 96u8, 237u8, 249u8, 189u8, 199u8, 196u8, 234u8, 0u8, 124u8, 174u8, 26u8,
                 155u8, 189u8, 3u8, 228u8, 30u8, 91u8, 252u8, 205u8, 114u8, 49u8, 166u8,
                 236u8, 56u8, 60u8, 46u8, 221u8, 120u8, 0u8, 240u8, 210u8, 12u8,
@@ -12178,11 +12185,6 @@ function transferOwnership(address newOwner) external;
                 171u8, 222u8, 22u8, 183u8, 169u8, 25u8, 44u8, 49u8, 198u8, 35u8, 27u8,
                 21u8, 57u8, 186u8, 214u8, 254u8, 215u8, 118u8, 53u8, 222u8, 76u8, 0u8,
                 135u8, 24u8, 219u8, 220u8, 175u8, 183u8, 184u8, 54u8, 58u8, 254u8,
-            ],
-            [
-                184u8, 154u8, 221u8, 217u8, 55u8, 244u8, 79u8, 144u8, 44u8, 132u8, 149u8,
-                150u8, 100u8, 24u8, 55u8, 205u8, 122u8, 242u8, 252u8, 236u8, 239u8, 34u8,
-                210u8, 167u8, 134u8, 111u8, 220u8, 26u8, 217u8, 192u8, 174u8, 46u8,
             ],
             [
                 187u8, 112u8, 157u8, 234u8, 116u8, 79u8, 6u8, 209u8, 178u8, 110u8, 130u8,
@@ -12221,12 +12223,12 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(ExecutionDone),
             ::core::stringify!(RoleGranted),
             ::core::stringify!(OutputSendingStarted),
+            ::core::stringify!(MaskedInputEvent),
             ::core::stringify!(InputCollectionStarted),
             ::core::stringify!(InputMaskReservationStarted),
             ::core::stringify!(OwnershipTransferred),
             ::core::stringify!(InitializeStoffelAccessControl),
             ::core::stringify!(ReservedInputEvent),
-            ::core::stringify!(MaskedInputEvent),
             ::core::stringify!(PreprocessingStarted),
             ::core::stringify!(RoleAdminChanged),
             ::core::stringify!(EnoughOutputShares),
@@ -12240,12 +12242,12 @@ function transferOwnership(address newOwner) external;
             <ExecutionDone as alloy_sol_types::SolEvent>::SIGNATURE,
             <RoleGranted as alloy_sol_types::SolEvent>::SIGNATURE,
             <OutputSendingStarted as alloy_sol_types::SolEvent>::SIGNATURE,
+            <MaskedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
             <InputCollectionStarted as alloy_sol_types::SolEvent>::SIGNATURE,
             <InputMaskReservationStarted as alloy_sol_types::SolEvent>::SIGNATURE,
             <OwnershipTransferred as alloy_sol_types::SolEvent>::SIGNATURE,
             <InitializeStoffelAccessControl as alloy_sol_types::SolEvent>::SIGNATURE,
             <ReservedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
-            <MaskedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
             <PreprocessingStarted as alloy_sol_types::SolEvent>::SIGNATURE,
             <RoleAdminChanged as alloy_sol_types::SolEvent>::SIGNATURE,
             <EnoughOutputShares as alloy_sol_types::SolEvent>::SIGNATURE,
@@ -12893,7 +12895,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`submitMaskedInput`] function.
         pub fn submitMaskedInput(
             &self,
-            maskedInput: alloy::sol_types::private::primitives::aliases::U256,
+            maskedInput: alloy::sol_types::private::Bytes,
             reservedIndex: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, submitMaskedInputCall, N> {
             self.call_builder(

@@ -18,7 +18,7 @@ interface IStoffelCoordinator {
     function renounceRole(bytes32 role, address callerConfirmation) external;
     function reserveMaskIndex(uint256 i) external;
     function revokeRole(bytes32 role, address account) external;
-    function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) external;
+    function submitMaskedInput(bytes memory maskedInput, uint256 reservedIndexed) external;
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }
 ```
@@ -174,8 +174,8 @@ interface IStoffelCoordinator {
     "inputs": [
       {
         "name": "maskedInput",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "bytes",
+        "internalType": "bytes"
       },
       {
         "name": "reservedIndexed",
@@ -2149,19 +2149,19 @@ function revokeRole(bytes32 role, address account) external;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `submitMaskedInput(uint256,uint256)` and selector `0x0bda81cf`.
+    /**Function with signature `submitMaskedInput(bytes,uint256)` and selector `0x5648526c`.
 ```solidity
-function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) external;
+function submitMaskedInput(bytes memory maskedInput, uint256 reservedIndexed) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct submitMaskedInputCall {
         #[allow(missing_docs)]
-        pub maskedInput: alloy::sol_types::private::primitives::aliases::U256,
+        pub maskedInput: alloy::sol_types::private::Bytes,
         #[allow(missing_docs)]
         pub reservedIndexed: alloy::sol_types::private::primitives::aliases::U256,
     }
-    ///Container type for the return parameters of the [`submitMaskedInput(uint256,uint256)`](submitMaskedInputCall) function.
+    ///Container type for the return parameters of the [`submitMaskedInput(bytes,uint256)`](submitMaskedInputCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct submitMaskedInputReturn {}
@@ -2177,12 +2177,12 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) externa
             #[doc(hidden)]
             #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Uint<256>,
             );
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::Bytes,
                 alloy::sol_types::private::primitives::aliases::U256,
             );
             #[cfg(test)]
@@ -2260,7 +2260,7 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) externa
         #[automatically_derived]
         impl alloy_sol_types::SolCall for submitMaskedInputCall {
             type Parameters<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Uint<256>,
             );
             type Token<'a> = <Self::Parameters<
@@ -2271,8 +2271,8 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) externa
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "submitMaskedInput(uint256,uint256)";
-            const SELECTOR: [u8; 4] = [11u8, 218u8, 129u8, 207u8];
+            const SIGNATURE: &'static str = "submitMaskedInput(bytes,uint256)";
+            const SELECTOR: [u8; 4] = [86u8, 72u8, 82u8, 108u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -2282,9 +2282,9 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) externa
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
                 (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.maskedInput),
+                    <alloy::sol_types::sol_data::Bytes as alloy_sol_types::SolType>::tokenize(
+                        &self.maskedInput,
+                    ),
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.reservedIndexed),
@@ -2503,12 +2503,12 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [1u8, 255u8, 201u8, 167u8],
-            [11u8, 218u8, 129u8, 207u8],
             [33u8, 220u8, 123u8, 155u8],
             [35u8, 40u8, 189u8, 18u8],
             [36u8, 138u8, 156u8, 163u8],
             [47u8, 47u8, 241u8, 93u8],
             [54u8, 86u8, 138u8, 190u8],
+            [86u8, 72u8, 82u8, 108u8],
             [145u8, 209u8, 72u8, 84u8],
             [213u8, 71u8, 116u8, 31u8],
             [252u8, 120u8, 178u8, 232u8],
@@ -2516,12 +2516,12 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// The names of the variants in the same order as `SELECTORS`.
         pub const VARIANT_NAMES: &'static [&'static str] = &[
             ::core::stringify!(supportsInterface),
-            ::core::stringify!(submitMaskedInput),
             ::core::stringify!(reserveMaskIndex),
             ::core::stringify!(availableInputMasks),
             ::core::stringify!(getRoleAdmin),
             ::core::stringify!(grantRole),
             ::core::stringify!(renounceRole),
+            ::core::stringify!(submitMaskedInput),
             ::core::stringify!(hasRole),
             ::core::stringify!(revokeRole),
             ::core::stringify!(isParty),
@@ -2529,12 +2529,12 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// The signatures in the same order as `SELECTORS`.
         pub const SIGNATURES: &'static [&'static str] = &[
             <supportsInterfaceCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <submitMaskedInputCall as alloy_sol_types::SolCall>::SIGNATURE,
             <reserveMaskIndexCall as alloy_sol_types::SolCall>::SIGNATURE,
             <availableInputMasksCall as alloy_sol_types::SolCall>::SIGNATURE,
             <getRoleAdminCall as alloy_sol_types::SolCall>::SIGNATURE,
             <grantRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <renounceRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <submitMaskedInputCall as alloy_sol_types::SolCall>::SIGNATURE,
             <hasRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <revokeRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <isPartyCall as alloy_sol_types::SolCall>::SIGNATURE,
@@ -2625,17 +2625,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     supportsInterface
                 },
                 {
-                    fn submitMaskedInput(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IStoffelCoordinatorCalls::submitMaskedInput)
-                    }
-                    submitMaskedInput
-                },
-                {
                     fn reserveMaskIndex(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
@@ -2687,6 +2676,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(IStoffelCoordinatorCalls::renounceRole)
                     }
                     renounceRole
+                },
+                {
+                    fn submitMaskedInput(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
+                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(IStoffelCoordinatorCalls::submitMaskedInput)
+                    }
+                    submitMaskedInput
                 },
                 {
                     fn hasRole(
@@ -2749,17 +2749,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     supportsInterface
                 },
                 {
-                    fn submitMaskedInput(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IStoffelCoordinatorCalls::submitMaskedInput)
-                    }
-                    submitMaskedInput
-                },
-                {
                     fn reserveMaskIndex(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
@@ -2813,6 +2802,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(IStoffelCoordinatorCalls::renounceRole)
                     }
                     renounceRole
+                },
+                {
+                    fn submitMaskedInput(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
+                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(IStoffelCoordinatorCalls::submitMaskedInput)
+                    }
+                    submitMaskedInput
                 },
                 {
                     fn hasRole(
@@ -3528,7 +3528,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`submitMaskedInput`] function.
         pub fn submitMaskedInput(
             &self,
-            maskedInput: alloy::sol_types::private::primitives::aliases::U256,
+            maskedInput: alloy::sol_types::private::Bytes,
             reservedIndexed: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, submitMaskedInputCall, N> {
             self.call_builder(

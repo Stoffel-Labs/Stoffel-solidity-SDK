@@ -63,7 +63,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         /// @notice The input mask index reserved by the client
         uint256 index;
         /// @notice The masked input value (raw input + mask)
-        uint256 maskedInput;
+        bytes maskedInput;
     }
 
     /// @notice Mapping from client address to their submitted masked input
@@ -83,7 +83,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @param client Address of the client submitting the input
     /// @param maskedInput The masked input value
     /// @param reservedIndex The index used for this input
-    event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
+    event MaskedInputEvent(address client, bytes maskedInput, uint256 reservedIndex);
 
     /// @notice Emitted when enough output shares for reconstruction have been received for a client
     /// @param client The client address the shares are for (`address(0)` for public outputs)
@@ -96,14 +96,14 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @notice Thrown when a client tries to submit a masked input but has already done so
     error AlreadySubmittedInputs(address client);
 
-    /// @notice Thrown when a client submits a masked input of zero, which is disallowed
-    error ZeroMaskedInput(address client);
-
     /// @notice Thrown when a client submits a masked input for an index it did not reserve
     error IndexNotReserved(address client, uint256 index);
 
     /// @notice Thrown when an operation requires the client to have a reserved index but none exists
     error NoIndicesReserved(address client);
+
+    /// @notice Thrown when a client submits an empty masked input
+    error ZeroMaskedInput(address client);
 
     /// @notice Thrown when a client attempts to reserve an index that is out of range
     error IndexOutOfBounds(address client, uint256 index);
@@ -203,7 +203,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @param reservedIndex The index that was previously reserved by this client
     /// @dev After submission, the index is unreserved to prevent mask reuse.
     ///      The mask must be obtained off-chain from MPC nodes before calling this.
-    function submitMaskedInput(uint256 maskedInput, uint256 reservedIndex)
+    function submitMaskedInput(bytes calldata maskedInput, uint256 reservedIndex)
         external
         override
         onlyRole(INPUT_CLIENT_ROLE)
@@ -212,11 +212,11 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
             revert IndexNotReserved(msg.sender, reservedIndex);
         }
 
-        if (maskedInput == 0) {
-            revert ZeroMaskedInput(msg.sender);
-        }
+	if (maskedInput.length == 0) {
+	    revert ZeroMaskedInput(msg.sender);
+	}
 
-        if (clientInputs[msg.sender].maskedInput != 0) {
+        if (clientInputs[msg.sender].maskedInput.length != 0) {
             revert AlreadySubmittedInputs(msg.sender);
         }
 

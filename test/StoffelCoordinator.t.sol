@@ -59,9 +59,9 @@ contract StoffelCoordinatorTest is Test {
         vm.prank(client2);
         coordinator.reserveMaskIndex(1);
         vm.prank(client1);
-        coordinator.submitMaskedInput(11111, 0);
+        coordinator.submitMaskedInput(hex"2B67", 0);
         vm.prank(client2);
-        coordinator.submitMaskedInput(22222, 1);
+        coordinator.submitMaskedInput(hex"56CE", 1);
 
         _advanceToFinalize();
 
