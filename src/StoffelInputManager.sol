@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.26;
 
 import {IStoffelInputManager} from "./interfaces/IStoffelInputManager.sol";
 import {StoffelAccessControl} from "./StoffelAccessControl.sol";
@@ -175,21 +175,15 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     ///      input mask from MPC nodes and submit their masked input.
     function reserveMaskIndex(uint256 i) external override {
         // check if index within bounds
-        if (i >= nTotalIndices) {
-            revert IndexOutOfBounds(msg.sender, i);
-        }
+        require(i < nTotalIndices, IndexOutOfBounds(msg.sender, i));
 
         // check if client already reserved indices
         for (uint256 j = 0; j < nTotalIndices; j++) {
-            if (reservedInputIndices[j] == msg.sender) {
-                revert ClientAlreadyReservedIndex(msg.sender, j);
-            }
+            require(reservedInputIndices[j] != msg.sender, ClientAlreadyReservedIndex(msg.sender, j));
         }
 
         // check if index available
-        if (reservedInputIndices[i] != address(0)) {
-            revert IndexAlreadyReserved(i, msg.sender, reservedInputIndices[i]);
-        }
+        require(reservedInputIndices[i] == address(0), IndexAlreadyReserved(i, msg.sender, reservedInputIndices[i]));
 
         reservedInputIndices[i] = msg.sender;
         _grantRole(INPUT_CLIENT_ROLE, msg.sender);
@@ -208,17 +202,9 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         override
         onlyRole(INPUT_CLIENT_ROLE)
     {
-        if (reservedInputIndices[reservedIndex] != msg.sender) {
-            revert IndexNotReserved(msg.sender, reservedIndex);
-        }
-
-	if (maskedInput.length == 0) {
-	    revert ZeroMaskedInput(msg.sender);
-	}
-
-        if (clientInputs[msg.sender].maskedInput.length != 0) {
-            revert AlreadySubmittedInputs(msg.sender);
-        }
+        require(reservedInputIndices[reservedIndex] == msg.sender, IndexNotReserved(msg.sender, reservedIndex));
+        require(maskedInput.length != 0, ZeroMaskedInput(msg.sender));
+        require(clientInputs[msg.sender].maskedInput.length == 0, AlreadySubmittedInputs(msg.sender));
 
         clientInputs[msg.sender] = MaskedInput({index: reservedIndex, maskedInput: maskedInput});
 
@@ -234,15 +220,11 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     ///      to prevent a malicious party from exhausting storage by submitting shares for arbitrary addresses.
     ///      Decryption and secret reconstruction are performed client-side.
     function _sendOutputShares(address client, bytes calldata shares) internal {
-        if (!hasRole(OUTPUT_CLIENT_ROLE, client)) {
-            revert OutputClientNotRegistered(client);
-        }
+        require(hasRole(OUTPUT_CLIENT_ROLE, client), OutputClientNotRegistered(client));
 
         Output storage output = outputs[client];
 
-        if (output.sharesReceived[msg.sender]) {
-            revert AlreadyReceivedOutputShares(client, msg.sender);
-        }
+        require(!output.sharesReceived[msg.sender], AlreadyReceivedOutputShares(client, msg.sender));
         // more than n output share messages are never stored, since there are only n parties
         require(output.nShares < n, "BUG: ALREADY RECEIVED SHARES FROM N PARTIES, TOO MANY CLIENTS");
 

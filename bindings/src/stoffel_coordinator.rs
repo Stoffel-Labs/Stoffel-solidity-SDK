@@ -24,6 +24,7 @@ interface StoffelCoordinator {
     error ZeroMaskedInput(address client);
 
     event CoordinatorInitialized(address coordinator, uint256 timeofInitialization, uint256 creationBlock, address designatedParty);
+    event CoordinatorReset(address coordinator, uint256 lastResetBlock);
     event EnoughOutputShares(address indexed client, bytes[] shares);
     event ExecutionDone(address executor, uint256 timeOfExecution);
     event IndexBufferEvent(uint256 totalIndices, address designatedParty);
@@ -59,6 +60,7 @@ interface StoffelCoordinator {
     function hasRole(bytes32 role, address account) external view returns (bool);
     function isDesignatedParty(address account) external view returns (bool);
     function isParty(address account) external view returns (bool);
+    function lastResetBlock() external view returns (uint256);
     function owner() external view returns (address);
     function renounceOwnership() external;
     function renounceRole(bytes32 role, address account) external;
@@ -374,6 +376,19 @@ interface StoffelCoordinator {
   },
   {
     "type": "function",
+    "name": "lastResetBlock",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -584,6 +599,25 @@ interface StoffelCoordinator {
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CoordinatorReset",
+    "inputs": [
+      {
+        "name": "coordinator",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "lastResetBlock",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -2915,6 +2949,122 @@ event CoordinatorInitialized(address coordinator, uint256 timeofInitialization, 
         impl From<&CoordinatorInitialized> for alloy_sol_types::private::LogData {
             #[inline]
             fn from(this: &CoordinatorInitialized) -> alloy_sol_types::private::LogData {
+                alloy_sol_types::SolEvent::encode_log_data(this)
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Event with signature `CoordinatorReset(address,uint256)` and selector `0x51fb20da0aafaceb18d92ff1a476059a0a8bbf16a0bf7c38b94a98b356ace457`.
+```solidity
+event CoordinatorReset(address coordinator, uint256 lastResetBlock);
+```*/
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    #[derive(Clone)]
+    pub struct CoordinatorReset {
+        #[allow(missing_docs)]
+        pub coordinator: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub lastResetBlock: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        #[automatically_derived]
+        impl alloy_sol_types::SolEvent for CoordinatorReset {
+            type DataTuple<'a> = (
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Uint<256>,
+            );
+            type DataToken<'a> = <Self::DataTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type TopicList = (alloy_sol_types::sol_data::FixedBytes<32>,);
+            const SIGNATURE: &'static str = "CoordinatorReset(address,uint256)";
+            const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
+                81u8, 251u8, 32u8, 218u8, 10u8, 175u8, 172u8, 235u8, 24u8, 217u8, 47u8,
+                241u8, 164u8, 118u8, 5u8, 154u8, 10u8, 139u8, 191u8, 22u8, 160u8, 191u8,
+                124u8, 56u8, 185u8, 74u8, 152u8, 179u8, 86u8, 172u8, 228u8, 87u8,
+            ]);
+            const ANONYMOUS: bool = false;
+            #[allow(unused_variables)]
+            #[inline]
+            fn new(
+                topics: <Self::TopicList as alloy_sol_types::SolType>::RustType,
+                data: <Self::DataTuple<'_> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                Self {
+                    coordinator: data.0,
+                    lastResetBlock: data.1,
+                }
+            }
+            #[inline]
+            fn check_signature(
+                topics: &<Self::TopicList as alloy_sol_types::SolType>::RustType,
+            ) -> alloy_sol_types::Result<()> {
+                if topics.0 != Self::SIGNATURE_HASH {
+                    return Err(
+                        alloy_sol_types::Error::invalid_event_signature_hash(
+                            Self::SIGNATURE,
+                            topics.0,
+                            Self::SIGNATURE_HASH,
+                        ),
+                    );
+                }
+                Ok(())
+            }
+            #[inline]
+            fn tokenize_body(&self) -> Self::DataToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.coordinator,
+                    ),
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(&self.lastResetBlock),
+                )
+            }
+            #[inline]
+            fn topics(&self) -> <Self::TopicList as alloy_sol_types::SolType>::RustType {
+                (Self::SIGNATURE_HASH.into(),)
+            }
+            #[inline]
+            fn encode_topics_raw(
+                &self,
+                out: &mut [alloy_sol_types::abi::token::WordToken],
+            ) -> alloy_sol_types::Result<()> {
+                if out.len() < <Self::TopicList as alloy_sol_types::TopicList>::COUNT {
+                    return Err(alloy_sol_types::Error::Overrun);
+                }
+                out[0usize] = alloy_sol_types::abi::token::WordToken(
+                    Self::SIGNATURE_HASH,
+                );
+                Ok(())
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::private::IntoLogData for CoordinatorReset {
+            fn to_log_data(&self) -> alloy_sol_types::private::LogData {
+                From::from(self)
+            }
+            fn into_log_data(self) -> alloy_sol_types::private::LogData {
+                From::from(&self)
+            }
+        }
+        #[automatically_derived]
+        impl From<&CoordinatorReset> for alloy_sol_types::private::LogData {
+            #[inline]
+            fn from(this: &CoordinatorReset) -> alloy_sol_types::private::LogData {
                 alloy_sol_types::SolEvent::encode_log_data(this)
             }
         }
@@ -7609,6 +7759,155 @@ function isParty(address account) external view returns (bool);
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    /**Function with signature `lastResetBlock()` and selector `0x6b5e12ca`.
+```solidity
+function lastResetBlock() external view returns (uint256);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct lastResetBlockCall;
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
+    ///Container type for the return parameters of the [`lastResetBlock()`](lastResetBlockCall) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct lastResetBlockReturn {
+        #[allow(missing_docs)]
+        pub _0: alloy::sol_types::private::primitives::aliases::U256,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            #[allow(dead_code)]
+            type UnderlyingSolTuple<'a> = ();
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = ();
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<lastResetBlockCall> for UnderlyingRustTuple<'_> {
+                fn from(value: lastResetBlockCall) -> Self {
+                    ()
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for lastResetBlockCall {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            #[allow(dead_code)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::primitives::aliases::U256,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<lastResetBlockReturn>
+            for UnderlyingRustTuple<'_> {
+                fn from(value: lastResetBlockReturn) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>>
+            for lastResetBlockReturn {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for lastResetBlockCall {
+            type Parameters<'a> = ();
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = alloy::sol_types::private::primitives::aliases::U256;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<256>,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "lastResetBlock()";
+            const SELECTOR: [u8; 4] = [107u8, 94u8, 18u8, 202u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                ()
+            }
+            #[inline]
+            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+                (
+                    <alloy::sol_types::sol_data::Uint<
+                        256,
+                    > as alloy_sol_types::SolType>::tokenize(ret),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
+                    .map(|r| {
+                        let r: lastResetBlockReturn = r.into();
+                        r._0
+                    })
+            }
+            #[inline]
+            fn abi_decode_returns_validate(
+                data: &[u8],
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
+                    .map(|r| {
+                        let r: lastResetBlockReturn = r.into();
+                        r._0
+                    })
+            }
+        }
+    };
+    #[derive(serde::Serialize, serde::Deserialize)]
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `owner()` and selector `0x8da5cb5b`.
 ```solidity
 function owner() external view returns (address);
@@ -9883,6 +10182,8 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         isParty(isPartyCall),
         #[allow(missing_docs)]
+        lastResetBlock(lastResetBlockCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
         #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
@@ -9939,6 +10240,7 @@ function transferOwnership(address newOwner) external;
             [86u8, 72u8, 82u8, 108u8],
             [88u8, 223u8, 13u8, 1u8],
             [92u8, 184u8, 107u8, 116u8],
+            [107u8, 94u8, 18u8, 202u8],
             [113u8, 80u8, 24u8, 166u8],
             [127u8, 53u8, 181u8, 96u8],
             [141u8, 165u8, 203u8, 91u8],
@@ -9976,6 +10278,7 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(submitMaskedInput),
             ::core::stringify!(OUTPUT_CLIENT_ROLE),
             ::core::stringify!(resetCoordinator),
+            ::core::stringify!(lastResetBlock),
             ::core::stringify!(renounceOwnership),
             ::core::stringify!(DESIGNATED_PARTY_ROLE),
             ::core::stringify!(owner),
@@ -10013,6 +10316,7 @@ function transferOwnership(address newOwner) external;
             <submitMaskedInputCall as alloy_sol_types::SolCall>::SIGNATURE,
             <OUTPUT_CLIENT_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
             <resetCoordinatorCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <lastResetBlockCall as alloy_sol_types::SolCall>::SIGNATURE,
             <renounceOwnershipCall as alloy_sol_types::SolCall>::SIGNATURE,
             <DESIGNATED_PARTY_ROLECall as alloy_sol_types::SolCall>::SIGNATURE,
             <ownerCall as alloy_sol_types::SolCall>::SIGNATURE,
@@ -10055,7 +10359,7 @@ function transferOwnership(address newOwner) external;
     impl alloy_sol_types::SolInterface for StoffelCoordinatorCalls {
         const NAME: &'static str = "StoffelCoordinatorCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 34usize;
+        const COUNT: usize = 35usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -10110,6 +10414,9 @@ function transferOwnership(address newOwner) external;
                     <isDesignatedPartyCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::isParty(_) => <isPartyCall as alloy_sol_types::SolCall>::SELECTOR,
+                Self::lastResetBlock(_) => {
+                    <lastResetBlockCall as alloy_sol_types::SolCall>::SELECTOR
+                }
                 Self::owner(_) => <ownerCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::renounceOwnership(_) => {
                     <renounceOwnershipCall as alloy_sol_types::SolCall>::SELECTOR
@@ -10355,6 +10662,17 @@ function transferOwnership(address newOwner) external;
                             .map(StoffelCoordinatorCalls::resetCoordinator)
                     }
                     resetCoordinator
+                },
+                {
+                    fn lastResetBlock(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
+                        <lastResetBlockCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(StoffelCoordinatorCalls::lastResetBlock)
+                    }
+                    lastResetBlock
                 },
                 {
                     fn renounceOwnership(
@@ -10745,6 +11063,17 @@ function transferOwnership(address newOwner) external;
                     resetCoordinator
                 },
                 {
+                    fn lastResetBlock(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
+                        <lastResetBlockCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(StoffelCoordinatorCalls::lastResetBlock)
+                    }
+                    lastResetBlock
+                },
+                {
                     fn renounceOwnership(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<StoffelCoordinatorCalls> {
@@ -11017,6 +11346,11 @@ function transferOwnership(address newOwner) external;
                 Self::isParty(inner) => {
                     <isPartyCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
+                Self::lastResetBlock(inner) => {
+                    <lastResetBlockCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
@@ -11196,6 +11530,12 @@ function transferOwnership(address newOwner) external;
                 }
                 Self::isParty(inner) => {
                     <isPartyCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
+                }
+                Self::lastResetBlock(inner) => {
+                    <lastResetBlockCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
                 }
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
@@ -12097,6 +12437,8 @@ function transferOwnership(address newOwner) external;
         #[allow(missing_docs)]
         CoordinatorInitialized(CoordinatorInitialized),
         #[allow(missing_docs)]
+        CoordinatorReset(CoordinatorReset),
+        #[allow(missing_docs)]
         EnoughOutputShares(EnoughOutputShares),
         #[allow(missing_docs)]
         ExecutionDone(ExecutionDone),
@@ -12154,6 +12496,11 @@ function transferOwnership(address newOwner) external;
                 48u8, 31u8, 138u8, 55u8, 1u8, 245u8, 178u8, 96u8, 25u8, 115u8, 130u8,
                 221u8, 115u8, 1u8, 7u8, 133u8, 66u8, 20u8, 79u8, 232u8, 253u8, 221u8,
                 24u8, 8u8, 61u8, 111u8, 110u8, 9u8, 228u8, 149u8, 138u8, 89u8,
+            ],
+            [
+                81u8, 251u8, 32u8, 218u8, 10u8, 175u8, 172u8, 235u8, 24u8, 217u8, 47u8,
+                241u8, 164u8, 118u8, 5u8, 154u8, 10u8, 139u8, 191u8, 22u8, 160u8, 191u8,
+                124u8, 56u8, 185u8, 74u8, 152u8, 179u8, 86u8, 172u8, 228u8, 87u8,
             ],
             [
                 86u8, 208u8, 62u8, 95u8, 30u8, 190u8, 195u8, 212u8, 180u8, 249u8, 222u8,
@@ -12223,6 +12570,7 @@ function transferOwnership(address newOwner) external;
             ::core::stringify!(ExecutionDone),
             ::core::stringify!(RoleGranted),
             ::core::stringify!(OutputSendingStarted),
+            ::core::stringify!(CoordinatorReset),
             ::core::stringify!(MaskedInputEvent),
             ::core::stringify!(InputCollectionStarted),
             ::core::stringify!(InputMaskReservationStarted),
@@ -12242,6 +12590,7 @@ function transferOwnership(address newOwner) external;
             <ExecutionDone as alloy_sol_types::SolEvent>::SIGNATURE,
             <RoleGranted as alloy_sol_types::SolEvent>::SIGNATURE,
             <OutputSendingStarted as alloy_sol_types::SolEvent>::SIGNATURE,
+            <CoordinatorReset as alloy_sol_types::SolEvent>::SIGNATURE,
             <MaskedInputEvent as alloy_sol_types::SolEvent>::SIGNATURE,
             <InputCollectionStarted as alloy_sol_types::SolEvent>::SIGNATURE,
             <InputMaskReservationStarted as alloy_sol_types::SolEvent>::SIGNATURE,
@@ -12279,7 +12628,7 @@ function transferOwnership(address newOwner) external;
     #[automatically_derived]
     impl alloy_sol_types::SolEventInterface for StoffelCoordinatorEvents {
         const NAME: &'static str = "StoffelCoordinatorEvents";
-        const COUNT: usize = 16usize;
+        const COUNT: usize = 17usize;
         fn decode_raw_log(
             topics: &[alloy_sol_types::Word],
             data: &[u8],
@@ -12293,6 +12642,13 @@ function transferOwnership(address newOwner) external;
                             data,
                         )
                         .map(Self::CoordinatorInitialized)
+                }
+                Some(<CoordinatorReset as alloy_sol_types::SolEvent>::SIGNATURE_HASH) => {
+                    <CoordinatorReset as alloy_sol_types::SolEvent>::decode_raw_log(
+                            topics,
+                            data,
+                        )
+                        .map(Self::CoordinatorReset)
                 }
                 Some(
                     <EnoughOutputShares as alloy_sol_types::SolEvent>::SIGNATURE_HASH,
@@ -12436,6 +12792,9 @@ function transferOwnership(address newOwner) external;
                 Self::CoordinatorInitialized(inner) => {
                     alloy_sol_types::private::IntoLogData::to_log_data(inner)
                 }
+                Self::CoordinatorReset(inner) => {
+                    alloy_sol_types::private::IntoLogData::to_log_data(inner)
+                }
                 Self::EnoughOutputShares(inner) => {
                     alloy_sol_types::private::IntoLogData::to_log_data(inner)
                 }
@@ -12486,6 +12845,9 @@ function transferOwnership(address newOwner) external;
         fn into_log_data(self) -> alloy_sol_types::private::LogData {
             match self {
                 Self::CoordinatorInitialized(inner) => {
+                    alloy_sol_types::private::IntoLogData::into_log_data(inner)
+                }
+                Self::CoordinatorReset(inner) => {
                     alloy_sol_types::private::IntoLogData::into_log_data(inner)
                 }
                 Self::EnoughOutputShares(inner) => {
@@ -12814,6 +13176,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<&P, isPartyCall, N> {
             self.call_builder(&isPartyCall { account })
         }
+        ///Creates a new call builder for the [`lastResetBlock`] function.
+        pub fn lastResetBlock(
+            &self,
+        ) -> alloy_contract::SolCallBuilder<&P, lastResetBlockCall, N> {
+            self.call_builder(&lastResetBlockCall)
+        }
         ///Creates a new call builder for the [`owner`] function.
         pub fn owner(&self) -> alloy_contract::SolCallBuilder<&P, ownerCall, N> {
             self.call_builder(&ownerCall)
@@ -12943,6 +13311,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             &self,
         ) -> alloy_contract::Event<&P, CoordinatorInitialized, N> {
             self.event_filter::<CoordinatorInitialized>()
+        }
+        ///Creates a new event filter for the [`CoordinatorReset`] event.
+        pub fn CoordinatorReset_filter(
+            &self,
+        ) -> alloy_contract::Event<&P, CoordinatorReset, N> {
+            self.event_filter::<CoordinatorReset>()
         }
         ///Creates a new event filter for the [`EnoughOutputShares`] event.
         pub fn EnoughOutputShares_filter(

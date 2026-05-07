@@ -79,7 +79,7 @@ contract StoffelCoordinatorTest is Test {
         vm.roll(newBlock);
 
         vm.expectEmit();
-        emit StoffelCoordinator.CoordinatorInitialized(address(coordinator), newTimestamp, newBlock, address(this));
+        emit StoffelCoordinator.CoordinatorReset(address(coordinator), newBlock);
         coordinator.resetCoordinator();
 
         // Round reset
@@ -91,9 +91,8 @@ contract StoffelCoordinatorTest is Test {
         // Base nonce incremented by nTotalIndices (3) to enforce uniqueness across runs
         assertEq(coordinator.baseNonce(), 3);
 
-        // Creation time and block refreshed
-        assertEq(coordinator.creationTime(), newTimestamp);
-        assertEq(coordinator.creationBlock(), newBlock);
+        // lastResetBlock updated; creationTime and creationBlock stay fixed from construction
+        assertEq(coordinator.lastResetBlock(), newBlock);
 
         // Output client roles persist across reset — sendOutputShares works with fresh state
         assertTrue(coordinator.hasRole(coordinator.OUTPUT_CLIENT_ROLE(), client1));
@@ -108,6 +107,23 @@ contract StoffelCoordinatorTest is Test {
         vm.prank(client2);
         coordinator.reserveMaskIndex(1);
         assertEq(coordinator.availableInputMasks(), 1);
+    }
+
+    function test_resetCoordinator_updatesLastResetBlockAndEmitsEvent() public {
+        uint256 initialCreationBlock = coordinator.creationBlock();
+
+        _advanceToFinalize();
+        coordinator.finalize();
+
+        uint256 newBlock = block.number + 50;
+        vm.roll(newBlock);
+
+        vm.expectEmit(true, true, true, true);
+        emit StoffelCoordinator.CoordinatorReset(address(coordinator), newBlock);
+        coordinator.resetCoordinator();
+
+        assertEq(coordinator.lastResetBlock(), newBlock);
+        assertEq(coordinator.creationBlock(), initialCreationBlock);
     }
 
     function test_resetCoordinator_revertsIfNotDesignatedParty() public {

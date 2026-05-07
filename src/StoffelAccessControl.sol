@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.26;
 
 import {IAccessControl, AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
@@ -53,9 +53,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         t = _t;
         n = 3 * t + 1;
 
-        if (initialMpcNodes.length < n) {
-            revert NotEnoughMPCParties(initialMpcNodes.length, n);
-        }
+        require(initialMpcNodes.length >= n, NotEnoughMPCParties(initialMpcNodes.length, n));
 
         // grant new roles
         for (uint256 i = 0; i < initialMpcNodes.length; i++) {

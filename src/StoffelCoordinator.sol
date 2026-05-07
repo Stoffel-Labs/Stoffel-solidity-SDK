@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.26;
 
 import {StoffelAccessControl} from "./StoffelAccessControl.sol";
 import {StoffelInputManager} from "./StoffelInputManager.sol";
@@ -34,9 +34,12 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @param coordinator The address of this coordinator contract
     /// @param timeofInitialization The block timestamp when initialization occurred
     /// @param designatedParty The address granted the designated party role
-    event CoordinatorInitialized(
-        address coordinator, uint256 timeofInitialization, uint256 creationBlock, address designatedParty
-    );
+    event CoordinatorInitialized(address coordinator, uint256 timeofInitialization, uint256 creationBlock, address designatedParty);
+
+    /// @notice Emitted when the coordinator contract is reset
+    /// @param coordinator The address of this coordinator contract
+    /// @param lastResetBlock The block number when the reset occurred
+    event CoordinatorReset(address coordinator, uint256 lastResetBlock);
 
     /// @notice Emitted when the preprocessing round is executed
     /// @param designatedParty The address that executed the preprocessing
@@ -84,6 +87,10 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @dev Used alongside creationTime for time- and block-based round transition logic
     uint256 public creationBlock;
 
+    /// @notice Block number when the last reset occured
+    /// @dev Used to let nodes know for what events to listen
+    uint256 public lastResetBlock;
+
     /// @notice Current round in the MPC lifecycle
     /// @dev Progresses through the Round enum values
     Round public round;
@@ -104,9 +111,7 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @notice Reverts if the current party count is below the required threshold n
     function _enoughMpcParties() internal view {
         uint256 current = getRoleMemberCount(PARTY_ROLE);
-        if (current < n) {
-            revert NotEnoughMPCParties(current, n);
-        }
+        require(current >= n, NotEnoughMPCParties(current, n));
     }
 
     /// @notice Modifier that advances to the next round after function execution
@@ -126,9 +131,7 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @param _round The expected current round
     /// @dev Reverts if the current round doesn't match the expected round
     function _atRound(Round _round) internal view {
-        if (round != _round) {
-            revert NotAtRound(_round, round);
-        }
+        require(round == _round, NotAtRound(_round, round));
     }
 
     /// @notice Internal function to advance to the next round
@@ -200,20 +203,18 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
         Ownable(msg.sender)
     {
         stoffelProgramHash = _stoffelProgramHash;
+        creationTime = block.timestamp;
+	creationBlock = block.number;
         _resetCoordinator();
     }
 
     /// @notice Reinitializes the StoffelCoordinator part of the coordinator
     /// @dev Does not initialize other parts such as access control, but emits initialization event
     function _resetCoordinator() internal {
-        creationTime = block.timestamp;
-        creationBlock = block.number;
+        lastResetBlock = block.number;
         round = Round.Idle;
 
-        address[] memory designatedParties = getRoleMembers(DESIGNATED_PARTY_ROLE);
-        uint256 nDesignatedParties = getRoleMemberCount(DESIGNATED_PARTY_ROLE);
-
-        emit CoordinatorInitialized(address(this), creationTime, creationBlock, designatedParties[0]);
+        emit CoordinatorReset(address(this), lastResetBlock);
     }
 
     /// @notice Reinitializes the entire MPC coordinator like the constructor
@@ -223,9 +224,7 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     }
 
     function _beforeRoleChange() internal view override {
-        if (round != Round.ProgramFinished) {
-            revert RoleChangeNotAllowed(round);
-        }
+        require(round == Round.ProgramFinished, RoleChangeNotAllowed(round));
     }
 
     /// @notice Initiates the preprocessing phase of the MPC computation
