@@ -10,16 +10,15 @@ interface IStoffelCoordinator {
     event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
     event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
 
-    function authenticateClient(uint256 requestIndex, address clientAddr, bytes memory signature) external returns (bool);
-    function currentlyAvailableInputMasks() external view returns (uint256);
+    function availableInputMasks() external view returns (uint256);
     function getRoleAdmin(bytes32 role) external view returns (bytes32);
     function grantRole(bytes32 role, address account) external;
     function hasRole(bytes32 role, address account) external view returns (bool);
     function isParty(address account) external view returns (bool);
     function renounceRole(bytes32 role, address callerConfirmation) external;
-    function reserveInputMask(uint256 indexToReserve) external;
+    function reserveMaskIndex(uint256 i) external;
     function revokeRole(bytes32 role, address account) external;
-    function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) external;
+    function submitMaskedInput(bytes memory maskedInput, uint256 reservedIndexed) external;
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }
 ```
@@ -29,36 +28,7 @@ interface IStoffelCoordinator {
 [
   {
     "type": "function",
-    "name": "authenticateClient",
-    "inputs": [
-      {
-        "name": "requestIndex",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "clientAddr",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "signature",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "currentlyAvailableInputMasks",
+    "name": "availableInputMasks",
     "inputs": [],
     "outputs": [
       {
@@ -169,10 +139,10 @@ interface IStoffelCoordinator {
   },
   {
     "type": "function",
-    "name": "reserveInputMask",
+    "name": "reserveMaskIndex",
     "inputs": [
       {
-        "name": "indexToReserve",
+        "name": "i",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -204,8 +174,8 @@ interface IStoffelCoordinator {
     "inputs": [
       {
         "name": "maskedInput",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "bytes",
+        "internalType": "bytes"
       },
       {
         "name": "reservedIndexed",
@@ -922,201 +892,19 @@ event RoleRevoked(bytes32 indexed role, address indexed account, address indexed
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `authenticateClient(uint256,address,bytes)` and selector `0xf9d8ff15`.
+    /**Function with signature `availableInputMasks()` and selector `0x2328bd12`.
 ```solidity
-function authenticateClient(uint256 requestIndex, address clientAddr, bytes memory signature) external returns (bool);
+function availableInputMasks() external view returns (uint256);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct authenticateClientCall {
-        #[allow(missing_docs)]
-        pub requestIndex: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
-        pub clientAddr: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
-        pub signature: alloy::sol_types::private::Bytes,
-    }
+    pub struct availableInputMasksCall;
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`authenticateClient(uint256,address,bytes)`](authenticateClientCall) function.
+    ///Container type for the return parameters of the [`availableInputMasks()`](availableInputMasksCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct authenticateClientReturn {
-        #[allow(missing_docs)]
-        pub _0: bool,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Address,
-                alloy::sol_types::sol_data::Bytes,
-            );
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
-                alloy::sol_types::private::Address,
-                alloy::sol_types::private::Bytes,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<authenticateClientCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: authenticateClientCall) -> Self {
-                    (value.requestIndex, value.clientAddr, value.signature)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for authenticateClientCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {
-                        requestIndex: tuple.0,
-                        clientAddr: tuple.1,
-                        signature: tuple.2,
-                    }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            #[allow(dead_code)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (bool,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<authenticateClientReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: authenticateClientReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for authenticateClientReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for authenticateClientCall {
-            type Parameters<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
-                alloy::sol_types::sol_data::Address,
-                alloy::sol_types::sol_data::Bytes,
-            );
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = bool;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "authenticateClient(uint256,address,bytes)";
-            const SELECTOR: [u8; 4] = [249u8, 216u8, 255u8, 21u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.requestIndex),
-                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
-                        &self.clientAddr,
-                    ),
-                    <alloy::sol_types::sol_data::Bytes as alloy_sol_types::SolType>::tokenize(
-                        &self.signature,
-                    ),
-                )
-            }
-            #[inline]
-            fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                (
-                    <alloy::sol_types::sol_data::Bool as alloy_sol_types::SolType>::tokenize(
-                        ret,
-                    ),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data)
-                    .map(|r| {
-                        let r: authenticateClientReturn = r.into();
-                        r._0
-                    })
-            }
-            #[inline]
-            fn abi_decode_returns_validate(
-                data: &[u8],
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
-                    .map(|r| {
-                        let r: authenticateClientReturn = r.into();
-                        r._0
-                    })
-            }
-        }
-    };
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `currentlyAvailableInputMasks()` and selector `0x25ac7f43`.
-```solidity
-function currentlyAvailableInputMasks() external view returns (uint256);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct currentlyAvailableInputMasksCall;
-    #[derive(serde::Serialize, serde::Deserialize)]
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    ///Container type for the return parameters of the [`currentlyAvailableInputMasks()`](currentlyAvailableInputMasksCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct currentlyAvailableInputMasksReturn {
+    pub struct availableInputMasksReturn {
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
@@ -1147,16 +935,16 @@ function currentlyAvailableInputMasks() external view returns (uint256);
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<currentlyAvailableInputMasksCall>
+            impl ::core::convert::From<availableInputMasksCall>
             for UnderlyingRustTuple<'_> {
-                fn from(value: currentlyAvailableInputMasksCall) -> Self {
+                fn from(value: availableInputMasksCall) -> Self {
                     ()
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for currentlyAvailableInputMasksCall {
+            for availableInputMasksCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self
                 }
@@ -1183,23 +971,23 @@ function currentlyAvailableInputMasks() external view returns (uint256);
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<currentlyAvailableInputMasksReturn>
+            impl ::core::convert::From<availableInputMasksReturn>
             for UnderlyingRustTuple<'_> {
-                fn from(value: currentlyAvailableInputMasksReturn) -> Self {
+                fn from(value: availableInputMasksReturn) -> Self {
                     (value._0,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for currentlyAvailableInputMasksReturn {
+            for availableInputMasksReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { _0: tuple.0 }
                 }
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolCall for currentlyAvailableInputMasksCall {
+        impl alloy_sol_types::SolCall for availableInputMasksCall {
             type Parameters<'a> = ();
             type Token<'a> = <Self::Parameters<
                 'a,
@@ -1209,8 +997,8 @@ function currentlyAvailableInputMasks() external view returns (uint256);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "currentlyAvailableInputMasks()";
-            const SELECTOR: [u8; 4] = [37u8, 172u8, 127u8, 67u8];
+            const SIGNATURE: &'static str = "availableInputMasks()";
+            const SELECTOR: [u8; 4] = [35u8, 40u8, 189u8, 18u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -1235,7 +1023,7 @@ function currentlyAvailableInputMasks() external view returns (uint256);
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence(data)
                     .map(|r| {
-                        let r: currentlyAvailableInputMasksReturn = r.into();
+                        let r: availableInputMasksReturn = r.into();
                         r._0
                     })
             }
@@ -1247,7 +1035,7 @@ function currentlyAvailableInputMasks() external view returns (uint256);
                     '_,
                 > as alloy_sol_types::SolType>::abi_decode_sequence_validate(data)
                     .map(|r| {
-                        let r: currentlyAvailableInputMasksReturn = r.into();
+                        let r: availableInputMasksReturn = r.into();
                         r._0
                     })
             }
@@ -2050,20 +1838,20 @@ function renounceRole(bytes32 role, address callerConfirmation) external;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `reserveInputMask(uint256)` and selector `0x5e32a6fd`.
+    /**Function with signature `reserveMaskIndex(uint256)` and selector `0x21dc7b9b`.
 ```solidity
-function reserveInputMask(uint256 indexToReserve) external;
+function reserveMaskIndex(uint256 i) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct reserveInputMaskCall {
+    pub struct reserveMaskIndexCall {
         #[allow(missing_docs)]
-        pub indexToReserve: alloy::sol_types::private::primitives::aliases::U256,
+        pub i: alloy::sol_types::private::primitives::aliases::U256,
     }
-    ///Container type for the return parameters of the [`reserveInputMask(uint256)`](reserveInputMaskCall) function.
+    ///Container type for the return parameters of the [`reserveMaskIndex(uint256)`](reserveMaskIndexCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct reserveInputMaskReturn {}
+    pub struct reserveMaskIndexReturn {}
     #[allow(
         non_camel_case_types,
         non_snake_case,
@@ -2093,18 +1881,18 @@ function reserveInputMask(uint256 indexToReserve) external;
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<reserveInputMaskCall>
+            impl ::core::convert::From<reserveMaskIndexCall>
             for UnderlyingRustTuple<'_> {
-                fn from(value: reserveInputMaskCall) -> Self {
-                    (value.indexToReserve,)
+                fn from(value: reserveMaskIndexCall) -> Self {
+                    (value.i,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for reserveInputMaskCall {
+            for reserveMaskIndexCall {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { indexToReserve: tuple.0 }
+                    Self { i: tuple.0 }
                 }
             }
         }
@@ -2127,41 +1915,41 @@ function reserveInputMask(uint256 indexToReserve) external;
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<reserveInputMaskReturn>
+            impl ::core::convert::From<reserveMaskIndexReturn>
             for UnderlyingRustTuple<'_> {
-                fn from(value: reserveInputMaskReturn) -> Self {
+                fn from(value: reserveMaskIndexReturn) -> Self {
                     ()
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
             impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for reserveInputMaskReturn {
+            for reserveMaskIndexReturn {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {}
                 }
             }
         }
-        impl reserveInputMaskReturn {
+        impl reserveMaskIndexReturn {
             fn _tokenize(
                 &self,
-            ) -> <reserveInputMaskCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
+            ) -> <reserveMaskIndexCall as alloy_sol_types::SolCall>::ReturnToken<'_> {
                 ()
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolCall for reserveInputMaskCall {
+        impl alloy_sol_types::SolCall for reserveMaskIndexCall {
             type Parameters<'a> = (alloy::sol_types::sol_data::Uint<256>,);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = reserveInputMaskReturn;
+            type Return = reserveMaskIndexReturn;
             type ReturnTuple<'a> = ();
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "reserveInputMask(uint256)";
-            const SELECTOR: [u8; 4] = [94u8, 50u8, 166u8, 253u8];
+            const SIGNATURE: &'static str = "reserveMaskIndex(uint256)";
+            const SELECTOR: [u8; 4] = [33u8, 220u8, 123u8, 155u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -2173,12 +1961,12 @@ function reserveInputMask(uint256 indexToReserve) external;
                 (
                     <alloy::sol_types::sol_data::Uint<
                         256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.indexToReserve),
+                    > as alloy_sol_types::SolType>::tokenize(&self.i),
                 )
             }
             #[inline]
             fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
-                reserveInputMaskReturn::_tokenize(ret)
+                reserveMaskIndexReturn::_tokenize(ret)
             }
             #[inline]
             fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
@@ -2361,19 +2149,19 @@ function revokeRole(bytes32 role, address account) external;
     };
     #[derive(serde::Serialize, serde::Deserialize)]
     #[derive(Default, Debug, PartialEq, Eq, Hash)]
-    /**Function with signature `submitMaskedInput(uint256,uint256)` and selector `0x0bda81cf`.
+    /**Function with signature `submitMaskedInput(bytes,uint256)` and selector `0x5648526c`.
 ```solidity
-function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) external;
+function submitMaskedInput(bytes memory maskedInput, uint256 reservedIndexed) external;
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct submitMaskedInputCall {
         #[allow(missing_docs)]
-        pub maskedInput: alloy::sol_types::private::primitives::aliases::U256,
+        pub maskedInput: alloy::sol_types::private::Bytes,
         #[allow(missing_docs)]
         pub reservedIndexed: alloy::sol_types::private::primitives::aliases::U256,
     }
-    ///Container type for the return parameters of the [`submitMaskedInput(uint256,uint256)`](submitMaskedInputCall) function.
+    ///Container type for the return parameters of the [`submitMaskedInput(bytes,uint256)`](submitMaskedInputCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct submitMaskedInputReturn {}
@@ -2389,12 +2177,12 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) externa
             #[doc(hidden)]
             #[allow(dead_code)]
             type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Uint<256>,
             );
             #[doc(hidden)]
             type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::primitives::aliases::U256,
+                alloy::sol_types::private::Bytes,
                 alloy::sol_types::private::primitives::aliases::U256,
             );
             #[cfg(test)]
@@ -2472,7 +2260,7 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) externa
         #[automatically_derived]
         impl alloy_sol_types::SolCall for submitMaskedInputCall {
             type Parameters<'a> = (
-                alloy::sol_types::sol_data::Uint<256>,
+                alloy::sol_types::sol_data::Bytes,
                 alloy::sol_types::sol_data::Uint<256>,
             );
             type Token<'a> = <Self::Parameters<
@@ -2483,8 +2271,8 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) externa
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "submitMaskedInput(uint256,uint256)";
-            const SELECTOR: [u8; 4] = [11u8, 218u8, 129u8, 207u8];
+            const SIGNATURE: &'static str = "submitMaskedInput(bytes,uint256)";
+            const SELECTOR: [u8; 4] = [86u8, 72u8, 82u8, 108u8];
             #[inline]
             fn new<'a>(
                 tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
@@ -2494,9 +2282,9 @@ function submitMaskedInput(uint256 maskedInput, uint256 reservedIndexed) externa
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
                 (
-                    <alloy::sol_types::sol_data::Uint<
-                        256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.maskedInput),
+                    <alloy::sol_types::sol_data::Bytes as alloy_sol_types::SolType>::tokenize(
+                        &self.maskedInput,
+                    ),
                     <alloy::sol_types::sol_data::Uint<
                         256,
                     > as alloy_sol_types::SolType>::tokenize(&self.reservedIndexed),
@@ -2686,9 +2474,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     #[derive()]
     pub enum IStoffelCoordinatorCalls {
         #[allow(missing_docs)]
-        authenticateClient(authenticateClientCall),
-        #[allow(missing_docs)]
-        currentlyAvailableInputMasks(currentlyAvailableInputMasksCall),
+        availableInputMasks(availableInputMasksCall),
         #[allow(missing_docs)]
         getRoleAdmin(getRoleAdminCall),
         #[allow(missing_docs)]
@@ -2700,7 +2486,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         renounceRole(renounceRoleCall),
         #[allow(missing_docs)]
-        reserveInputMask(reserveInputMaskCall),
+        reserveMaskIndex(reserveMaskIndexCall),
         #[allow(missing_docs)]
         revokeRole(revokeRoleCall),
         #[allow(missing_docs)]
@@ -2717,43 +2503,40 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
             [1u8, 255u8, 201u8, 167u8],
-            [11u8, 218u8, 129u8, 207u8],
+            [33u8, 220u8, 123u8, 155u8],
+            [35u8, 40u8, 189u8, 18u8],
             [36u8, 138u8, 156u8, 163u8],
-            [37u8, 172u8, 127u8, 67u8],
             [47u8, 47u8, 241u8, 93u8],
             [54u8, 86u8, 138u8, 190u8],
-            [94u8, 50u8, 166u8, 253u8],
+            [86u8, 72u8, 82u8, 108u8],
             [145u8, 209u8, 72u8, 84u8],
             [213u8, 71u8, 116u8, 31u8],
-            [249u8, 216u8, 255u8, 21u8],
             [252u8, 120u8, 178u8, 232u8],
         ];
         /// The names of the variants in the same order as `SELECTORS`.
         pub const VARIANT_NAMES: &'static [&'static str] = &[
             ::core::stringify!(supportsInterface),
-            ::core::stringify!(submitMaskedInput),
+            ::core::stringify!(reserveMaskIndex),
+            ::core::stringify!(availableInputMasks),
             ::core::stringify!(getRoleAdmin),
-            ::core::stringify!(currentlyAvailableInputMasks),
             ::core::stringify!(grantRole),
             ::core::stringify!(renounceRole),
-            ::core::stringify!(reserveInputMask),
+            ::core::stringify!(submitMaskedInput),
             ::core::stringify!(hasRole),
             ::core::stringify!(revokeRole),
-            ::core::stringify!(authenticateClient),
             ::core::stringify!(isParty),
         ];
         /// The signatures in the same order as `SELECTORS`.
         pub const SIGNATURES: &'static [&'static str] = &[
             <supportsInterfaceCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <submitMaskedInputCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <reserveMaskIndexCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <availableInputMasksCall as alloy_sol_types::SolCall>::SIGNATURE,
             <getRoleAdminCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <currentlyAvailableInputMasksCall as alloy_sol_types::SolCall>::SIGNATURE,
             <grantRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <renounceRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <reserveInputMaskCall as alloy_sol_types::SolCall>::SIGNATURE,
+            <submitMaskedInputCall as alloy_sol_types::SolCall>::SIGNATURE,
             <hasRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
             <revokeRoleCall as alloy_sol_types::SolCall>::SIGNATURE,
-            <authenticateClientCall as alloy_sol_types::SolCall>::SIGNATURE,
             <isPartyCall as alloy_sol_types::SolCall>::SIGNATURE,
         ];
         /// Returns the signature for the given selector, if known.
@@ -2781,15 +2564,12 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     impl alloy_sol_types::SolInterface for IStoffelCoordinatorCalls {
         const NAME: &'static str = "IStoffelCoordinatorCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 11usize;
+        const COUNT: usize = 10usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
-                Self::authenticateClient(_) => {
-                    <authenticateClientCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::currentlyAvailableInputMasks(_) => {
-                    <currentlyAvailableInputMasksCall as alloy_sol_types::SolCall>::SELECTOR
+                Self::availableInputMasks(_) => {
+                    <availableInputMasksCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::getRoleAdmin(_) => {
                     <getRoleAdminCall as alloy_sol_types::SolCall>::SELECTOR
@@ -2802,8 +2582,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                 Self::renounceRole(_) => {
                     <renounceRoleCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::reserveInputMask(_) => {
-                    <reserveInputMaskCall as alloy_sol_types::SolCall>::SELECTOR
+                Self::reserveMaskIndex(_) => {
+                    <reserveMaskIndexCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::revokeRole(_) => {
                     <revokeRoleCall as alloy_sol_types::SolCall>::SELECTOR
@@ -2845,15 +2625,26 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     supportsInterface
                 },
                 {
-                    fn submitMaskedInput(
+                    fn reserveMaskIndex(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <reserveMaskIndexCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
                             )
-                            .map(IStoffelCoordinatorCalls::submitMaskedInput)
+                            .map(IStoffelCoordinatorCalls::reserveMaskIndex)
                     }
-                    submitMaskedInput
+                    reserveMaskIndex
+                },
+                {
+                    fn availableInputMasks(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
+                        <availableInputMasksCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                            )
+                            .map(IStoffelCoordinatorCalls::availableInputMasks)
+                    }
+                    availableInputMasks
                 },
                 {
                     fn getRoleAdmin(
@@ -2865,17 +2656,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(IStoffelCoordinatorCalls::getRoleAdmin)
                     }
                     getRoleAdmin
-                },
-                {
-                    fn currentlyAvailableInputMasks(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <currentlyAvailableInputMasksCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IStoffelCoordinatorCalls::currentlyAvailableInputMasks)
-                    }
-                    currentlyAvailableInputMasks
                 },
                 {
                     fn grantRole(
@@ -2898,15 +2678,15 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     renounceRole
                 },
                 {
-                    fn reserveInputMask(
+                    fn submitMaskedInput(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <reserveInputMaskCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
                             )
-                            .map(IStoffelCoordinatorCalls::reserveInputMask)
+                            .map(IStoffelCoordinatorCalls::submitMaskedInput)
                     }
-                    reserveInputMask
+                    submitMaskedInput
                 },
                 {
                     fn hasRole(
@@ -2927,17 +2707,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(IStoffelCoordinatorCalls::revokeRole)
                     }
                     revokeRole
-                },
-                {
-                    fn authenticateClient(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                            )
-                            .map(IStoffelCoordinatorCalls::authenticateClient)
-                    }
-                    authenticateClient
                 },
                 {
                     fn isParty(
@@ -2980,15 +2749,26 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     supportsInterface
                 },
                 {
-                    fn submitMaskedInput(
+                    fn reserveMaskIndex(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <reserveMaskIndexCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
                             )
-                            .map(IStoffelCoordinatorCalls::submitMaskedInput)
+                            .map(IStoffelCoordinatorCalls::reserveMaskIndex)
                     }
-                    submitMaskedInput
+                    reserveMaskIndex
+                },
+                {
+                    fn availableInputMasks(
+                        data: &[u8],
+                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
+                        <availableInputMasksCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                                data,
+                            )
+                            .map(IStoffelCoordinatorCalls::availableInputMasks)
+                    }
+                    availableInputMasks
                 },
                 {
                     fn getRoleAdmin(
@@ -3000,17 +2780,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(IStoffelCoordinatorCalls::getRoleAdmin)
                     }
                     getRoleAdmin
-                },
-                {
-                    fn currentlyAvailableInputMasks(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <currentlyAvailableInputMasksCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IStoffelCoordinatorCalls::currentlyAvailableInputMasks)
-                    }
-                    currentlyAvailableInputMasks
                 },
                 {
                     fn grantRole(
@@ -3035,15 +2804,15 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                     renounceRole
                 },
                 {
-                    fn reserveInputMask(
+                    fn submitMaskedInput(
                         data: &[u8],
                     ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <reserveInputMaskCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
+                        <submitMaskedInputCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
                                 data,
                             )
-                            .map(IStoffelCoordinatorCalls::reserveInputMask)
+                            .map(IStoffelCoordinatorCalls::submitMaskedInput)
                     }
-                    reserveInputMask
+                    submitMaskedInput
                 },
                 {
                     fn hasRole(
@@ -3066,17 +2835,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                             .map(IStoffelCoordinatorCalls::revokeRole)
                     }
                     revokeRole
-                },
-                {
-                    fn authenticateClient(
-                        data: &[u8],
-                    ) -> alloy_sol_types::Result<IStoffelCoordinatorCalls> {
-                        <authenticateClientCall as alloy_sol_types::SolCall>::abi_decode_raw_validate(
-                                data,
-                            )
-                            .map(IStoffelCoordinatorCalls::authenticateClient)
-                    }
-                    authenticateClient
                 },
                 {
                     fn isParty(
@@ -3103,13 +2861,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[inline]
         fn abi_encoded_size(&self) -> usize {
             match self {
-                Self::authenticateClient(inner) => {
-                    <authenticateClientCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::currentlyAvailableInputMasks(inner) => {
-                    <currentlyAvailableInputMasksCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                Self::availableInputMasks(inner) => {
+                    <availableInputMasksCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -3132,8 +2885,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                         inner,
                     )
                 }
-                Self::reserveInputMask(inner) => {
-                    <reserveInputMaskCall as alloy_sol_types::SolCall>::abi_encoded_size(
+                Self::reserveMaskIndex(inner) => {
+                    <reserveMaskIndexCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -3155,14 +2908,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[inline]
         fn abi_encode_raw(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
             match self {
-                Self::authenticateClient(inner) => {
-                    <authenticateClientCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::currentlyAvailableInputMasks(inner) => {
-                    <currentlyAvailableInputMasksCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::availableInputMasks(inner) => {
+                    <availableInputMasksCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -3191,8 +2938,8 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
                         out,
                     )
                 }
-                Self::reserveInputMask(inner) => {
-                    <reserveInputMaskCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::reserveMaskIndex(inner) => {
+                    <reserveMaskIndexCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -3714,26 +3461,11 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<&P, C, N> {
             alloy_contract::SolCallBuilder::new_sol(&self.provider, &self.address, call)
         }
-        ///Creates a new call builder for the [`authenticateClient`] function.
-        pub fn authenticateClient(
+        ///Creates a new call builder for the [`availableInputMasks`] function.
+        pub fn availableInputMasks(
             &self,
-            requestIndex: alloy::sol_types::private::primitives::aliases::U256,
-            clientAddr: alloy::sol_types::private::Address,
-            signature: alloy::sol_types::private::Bytes,
-        ) -> alloy_contract::SolCallBuilder<&P, authenticateClientCall, N> {
-            self.call_builder(
-                &authenticateClientCall {
-                    requestIndex,
-                    clientAddr,
-                    signature,
-                },
-            )
-        }
-        ///Creates a new call builder for the [`currentlyAvailableInputMasks`] function.
-        pub fn currentlyAvailableInputMasks(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<&P, currentlyAvailableInputMasksCall, N> {
-            self.call_builder(&currentlyAvailableInputMasksCall)
+        ) -> alloy_contract::SolCallBuilder<&P, availableInputMasksCall, N> {
+            self.call_builder(&availableInputMasksCall)
         }
         ///Creates a new call builder for the [`getRoleAdmin`] function.
         pub fn getRoleAdmin(
@@ -3778,16 +3510,12 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 },
             )
         }
-        ///Creates a new call builder for the [`reserveInputMask`] function.
-        pub fn reserveInputMask(
+        ///Creates a new call builder for the [`reserveMaskIndex`] function.
+        pub fn reserveMaskIndex(
             &self,
-            indexToReserve: alloy::sol_types::private::primitives::aliases::U256,
-        ) -> alloy_contract::SolCallBuilder<&P, reserveInputMaskCall, N> {
-            self.call_builder(
-                &reserveInputMaskCall {
-                    indexToReserve,
-                },
-            )
+            i: alloy::sol_types::private::primitives::aliases::U256,
+        ) -> alloy_contract::SolCallBuilder<&P, reserveMaskIndexCall, N> {
+            self.call_builder(&reserveMaskIndexCall { i })
         }
         ///Creates a new call builder for the [`revokeRole`] function.
         pub fn revokeRole(
@@ -3800,7 +3528,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`submitMaskedInput`] function.
         pub fn submitMaskedInput(
             &self,
-            maskedInput: alloy::sol_types::private::primitives::aliases::U256,
+            maskedInput: alloy::sol_types::private::Bytes,
             reservedIndexed: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<&P, submitMaskedInputCall, N> {
             self.call_builder(

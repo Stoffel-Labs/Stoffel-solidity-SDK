@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.26;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
-import "./interfaces/IStoffelAccessControl.sol";
+import {IAccessControl, AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {AccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
+import {IStoffelAccessControl} from "./interfaces/IStoffelAccessControl.sol";
 
 /// @title StoffelAccessControl
 /// @author Stoffel Labs
@@ -20,57 +20,46 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     /// @dev The designated party can trigger round transitions and manage the MPC lifecycle
     bytes32 public constant DESIGNATED_PARTY_ROLE = keccak256("DESIGNATED_PARTY_ROLE");
 
-    /// @notice Maximum number of MPC parties allowed
-    /// @dev Must satisfy n >= 3t + 1 for HoneyBadger Byzantine fault tolerance
-    uint256 internal n_parties;
+    /// @notice Role identifier for clients
+    bytes32 public constant INPUT_CLIENT_ROLE = keccak256("INPUT_CLIENT_ROLE");
+
+    bytes32 public constant OUTPUT_CLIENT_ROLE = keccak256("OUPTUT_CLIENT_ROLE");
 
     /// @notice Fault tolerance threshold
     /// @dev Number of faulty/malicious parties the system can tolerate
-    uint256 internal threshold;
+    uint256 internal t;
 
-    /// @notice Mapping to track party membership
-    /// @dev True if the address has been granted PARTY_ROLE
-    mapping(address => bool) public is_party;
+    /// @notice n value
+    uint256 internal n;
 
     /// @notice Emitted when the access control is initialized
-    /// @param n Maximum number of parties
+    /// @param nParties Initial number of parties
     /// @param t Fault tolerance threshold
     /// @param initializer Address that deployed the contract
-    event InitializeStoffelAccessControl(uint256 n, uint256 t, address initializer);
+    event InitializeStoffelAccessControl(uint256 nParties, uint256 t, address initializer);
 
-    /// @notice Modifier restricting access to addresses with PARTY_ROLE
-    /// @dev Reverts if caller is not a registered MPC party
-    modifier onlyParty() {
-        _onlyParty();
-        _;
-    }
+    error NotAnExistingParty(address account);
 
-    /// @notice Internal function to verify caller has PARTY_ROLE
-    /// @dev Called by onlyParty modifier
-    function _onlyParty() internal view {
-        require(this.isParty(msg.sender), "Only a Stoffel party can call this function.");
-    }
+    error NotEnoughMPCParties(uint256 current, uint256 required);
 
-    /// @notice Modifier restricting access to the designated party
-    /// @dev Reverts if caller does not have DESIGNATED_PARTY_ROLE
-    modifier onlyDesignatedParty() {
-        _onlyDesignatedParty();
-        _;
-    }
-
-    /// @notice Internal function to verify caller has DESIGNATED_PARTY_ROLE
-    /// @dev Called by onlyDesignatedParty modifier
-    function _onlyDesignatedParty() internal view {
-        require(this.isDesignatedParty(msg.sender), "Only the designated Stofel party can call this function");
-    }
+    /// @notice Hook called before any public role change; override to add round-based guards
+    function _beforeRoleChange() internal virtual {}
 
     /// @notice Initializes the access control with party count and threshold
-    /// @param n Maximum number of MPC parties (must satisfy n >= 3t + 1)
-    /// @param t Fault tolerance threshold
+    /// @param _t Fault tolerance threshold
+    /// @param initialMpcNodes Array of addresses to be granted PARTY_ROLE
     /// @dev Emits InitializeStoffelAccessControl event on deployment
-    constructor(uint256 n, uint256 t) {
-        n_parties = n;
-        threshold = t;
+    constructor(uint256 _t, address[] memory initialMpcNodes) {
+        t = _t;
+        n = 3 * t + 1;
+
+        require(initialMpcNodes.length >= n, NotEnoughMPCParties(initialMpcNodes.length, n));
+
+        // grant new roles
+        for (uint256 i = 0; i < initialMpcNodes.length; i++) {
+            _grantRole(PARTY_ROLE, initialMpcNodes[i]);
+        }
+        _grantRole(DESIGNATED_PARTY_ROLE, initialMpcNodes[0]);
 
         emit InitializeStoffelAccessControl(n, t, msg.sender);
     }
@@ -98,10 +87,6 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
         override(AccessControl, AccessControlEnumerable)
         returns (bool)
     {
-        if (role == PARTY_ROLE) {
-            require(getRoleMemberCount(role) < n_parties, "Too many MPC parties");
-            is_party[account] = true;
-        }
         return super._grantRole(role, account);
     }
 
@@ -112,7 +97,9 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     function grantRole(bytes32 role, address account)
         public
         override(AccessControl, IAccessControl, IStoffelAccessControl)
+        onlyRole(DESIGNATED_PARTY_ROLE)
     {
+        _beforeRoleChange();
         _grantRole(role, account);
     }
 
@@ -120,27 +107,24 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     /// @param role The role identifier to revoke
     /// @param account The address to lose the role
     /// @return True if the role was revoked
-    /// @dev Enforces minimum party count (threshold) when revoking PARTY_ROLE
     function _revokeRole(bytes32 role, address account)
         internal
         override(AccessControl, AccessControlEnumerable)
         returns (bool)
     {
-        if (role == PARTY_ROLE) {
-            require(getRoleMemberCount(role) > threshold, "Not enough MPC parties");
-            is_party[account] = false;
-        }
         return super._revokeRole(role, account);
     }
 
     /// @notice Revokes a role from an account
     /// @param role The role identifier to revoke
     /// @param account The address to lose the role
-    /// @dev Public wrapper for _revokeRole with threshold enforcement
+    /// @dev Public wrapper for _revokeRole; roles can be revoked when no program is executing, but new parties need to be added
     function revokeRole(bytes32 role, address account)
         public
         override(AccessControl, IAccessControl, IStoffelAccessControl)
+        onlyRole(DESIGNATED_PARTY_ROLE)
     {
+        _beforeRoleChange();
         _revokeRole(role, account);
     }
 
@@ -149,6 +133,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     /// @param account The address renouncing the role (must be msg.sender)
     /// @dev Inherited from AccessControl, allows self-removal from roles
     function renounceRole(bytes32 role, address account) public override(AccessControl, IAccessControl) {
+        _beforeRoleChange();
         super.renounceRole(role, account);
     }
 
@@ -164,7 +149,7 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     /// @param account The address to check
     /// @return True if the account has PARTY_ROLE
     function isParty(address account) public view returns (bool) {
-        return is_party[account];
+        return hasRole(PARTY_ROLE, account);
     }
 
     /// @notice Checks if an address is the designated party
@@ -172,14 +157,6 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
     /// @return True if the account has DESIGNATED_PARTY_ROLE
     /// @dev Requires the caller to be an existing party
     function isDesignatedParty(address account) public view returns (bool) {
-        require(isParty(msg.sender), "This account is not an existing MPC Party");
-        address[] memory parties = getRoleMembers(DESIGNATED_PARTY_ROLE);
-        uint256 n = getRoleMemberCount(DESIGNATED_PARTY_ROLE);
-        for (uint256 i = 0; i < n; i++) {
-            if (parties[i] == account) {
-                return true;
-            }
-        }
-        return false;
+        return isParty(account) && hasRole(DESIGNATED_PARTY_ROLE, account);
     }
 }

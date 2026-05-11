@@ -1,267 +1,268 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {MockCoordinator} from "./mocks/MockCoordinator.sol";
-import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Test, Vm} from "forge-std/Test.sol";
+import {FakeCoordinator} from "./FakeCoordinator.sol";
+import {StoffelInputManager} from "../src/StoffelInputManager.sol";
+import {StoffelCoordinator} from "../src/StoffelCoordinator.sol";
 
-/// @title StoffelInputManagerTest
-/// @notice Tests for StoffelInputManager functionality
-/// @dev Tests input mask reservation, client authentication, and masked input submission
+/// @notice Tests for StoffelInputManager: index reservation, masked input submission, and nonce tracking.
 contract StoffelInputManagerTest is Test {
-    MockCoordinator public coordinator;
+    FakeCoordinator public coordinator;
 
-    address public designatedParty;
-    uint256 public designatedPartyPrivateKey;
-    address public party1;
-    address public party2;
-    address public client1;
-    uint256 public client1PrivateKey;
-    address public client2;
-    uint256 public client2PrivateKey;
-    address public unauthorized;
+    address party1 = makeAddr("PARTY1");
+    address party2 = makeAddr("PARTY2");
+    address party3 = makeAddr("PARTY3");
+    address client1 = makeAddr("CLIENT1");
+    address client2 = makeAddr("CLIENT2");
+    address client3 = makeAddr("CLIENT3");
 
-    bytes32 public constant PROGRAM_HASH = keccak256("test-program");
-    uint256 public constant N_PARTIES = 5;
-    uint256 public constant THRESHOLD = 1;
-    uint256 public constant BUFFER_SIZE = 10;
-
-    // Events to test
-    event IndexBufferEvent(uint256 totalIndices, address designatedParty);
-    event ReservedInputEvent(address client, uint256 reservedIndex);
-    event MaskedInputEvent(address client, uint256 maskedInput, uint256 reservedIndex);
+    uint256 constant N_INPUTS = 3;
 
     function setUp() public {
-        // Generate keys for accounts that need to sign
-        designatedPartyPrivateKey = 0x1;
-        designatedParty = vm.addr(designatedPartyPrivateKey);
+        address[] memory nodes = new address[](4);
+        nodes[0] = address(this);
+        nodes[1] = party1;
+        nodes[2] = party2;
+        nodes[3] = party3;
 
-        client1PrivateKey = 0x2;
-        client1 = vm.addr(client1PrivateKey);
+        address[] memory outClients = new address[](4);
+        outClients[0] = client1;
+        outClients[1] = client2;
+        outClients[2] = client3;
+        outClients[3] = address(0);
 
-        client2PrivateKey = 0x3;
-        client2 = vm.addr(client2PrivateKey);
-
-        party1 = makeAddr("PARTY1");
-        party2 = makeAddr("PARTY2");
-        unauthorized = makeAddr("UNAUTHORIZED");
-
-        // Create initial MPC nodes array
-        address[] memory initialNodes = new address[](2);
-        initialNodes[0] = party1;
-        initialNodes[1] = party2;
-
-        // Deploy coordinator (designatedParty gets DESIGNATED_PARTY_ROLE in constructor)
-        coordinator = new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, initialNodes);
-
-        // Progress to CollectingClientInputRound for input tests
-        // Use Test helpers that bypass the buggy onlyDesignatedParty modifier
-        vm.startPrank(designatedParty);
-        coordinator.startPreprocessingWithSizeTest(BUFFER_SIZE);
-        coordinator.gatherInputsTest();
-        vm.stopPrank();
+        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, N_INPUTS, outClients);
     }
 
-    // =========================================================================
-    // Buffer Initialization Tests
-    // =========================================================================
-
-    function test_initialzeInputMaskBuffer() public {
-        // Create fresh coordinator for this test
-        address[] memory nodes = new address[](1);
-        nodes[0] = party1;
-        MockCoordinator freshCoordinator =
-            new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, nodes);
-
-        vm.prank(designatedParty);
-        vm.expectEmit(true, true, true, true);
-        emit IndexBufferEvent(5, designatedParty);
-        freshCoordinator.startPreprocessingWithSizeTest(5);
+    function test_availableInputMasksInitial() public view {
+        assertEq(coordinator.availableInputMasks(), N_INPUTS);
     }
 
-    function test_cannotReinitializeBuffer() public {
-        // Buffer was already initialized in setUp
-        // Create a fresh coordinator and try to initialize twice
-        address[] memory nodes = new address[](1);
-        nodes[0] = party1;
-        MockCoordinator freshCoordinator =
-            new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, nodes);
-
-        vm.startPrank(designatedParty);
-        freshCoordinator.startPreprocessingWithSizeTest(5);
-        freshCoordinator.gatherInputsTest();
-
-        // Try to initialize again - should revert
-        vm.expectRevert("The index buffer has already been set");
-        freshCoordinator.initialzeInputMaskBuffer(10);
-        vm.stopPrank();
-    }
-
-    function test_onlyDesignatedPartyCanInitializeBuffer() public {
-        address[] memory nodes = new address[](1);
-        nodes[0] = party1;
-        MockCoordinator freshCoordinator =
-            new MockCoordinator(PROGRAM_HASH, N_PARTIES, THRESHOLD, designatedParty, nodes);
-
-        // Due to isDesignatedParty bug, this panics with array out-of-bounds instead
-        // of giving the expected "Only the designated Stofel party can call this function" error
-        vm.prank(unauthorized);
-        vm.expectRevert(); // Will panic with array out-of-bounds (0x32)
-        freshCoordinator.initialzeInputMaskBuffer(5);
-    }
-
-    // =========================================================================
-    // Index Reservation Tests
-    // =========================================================================
-
-    function test_reserveInputMask() public {
-        // Client can reserve an available input mask index
+    function test_reserveMaskIndex() public {
         vm.prank(client1);
-        vm.expectEmit(true, true, true, true);
-        emit ReservedInputEvent(client1, 0);
-        coordinator.reserveInputMask(0);
-
-        // Verify index count decreased
-        assertEq(coordinator.currentlyAvailableInputMasks(), BUFFER_SIZE - 1);
-    }
-
-    function test_reserveMultipleIndices() public {
-        // Client1 reserves index 0
-        vm.prank(client1);
-        coordinator.reserveInputMask(0);
-
-        // Client2 reserves index 1
+        coordinator.reserveMaskIndex(0);
+        assertEq(coordinator.availableInputMasks(), N_INPUTS - 1);
         vm.prank(client2);
-        coordinator.reserveInputMask(1);
-
-        // Verify both reservations succeeded
-        assertEq(coordinator.currentlyAvailableInputMasks(), BUFFER_SIZE - 2);
+        coordinator.reserveMaskIndex(1);
+        vm.prank(client3);
+        coordinator.reserveMaskIndex(2);
+        assertEq(coordinator.availableInputMasks(), 0);
     }
 
-    function test_cannotReserveAlreadyReservedIndex() public {
-        // Client1 reserves index 0
+    function test_reserveMaskIndex_grantsInputClientRole() public {
         vm.prank(client1);
-        coordinator.reserveInputMask(0);
+        coordinator.reserveMaskIndex(0);
+        assertTrue(coordinator.hasRole(coordinator.INPUT_CLIENT_ROLE(), client1));
+    }
 
-        // Client2 tries to reserve the same index - should fail
+    function test_reserveMaskIndex_revertsOutOfBounds() public {
+        vm.prank(client1);
+        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.IndexOutOfBounds.selector, client1, N_INPUTS));
+        coordinator.reserveMaskIndex(N_INPUTS);
+    }
+
+    function test_reserveMaskIndex_revertsIndexAlreadyReserved() public {
+        vm.prank(client1);
+        coordinator.reserveMaskIndex(0);
+
         vm.prank(client2);
-        vm.expectRevert("This index has already been reserved");
-        coordinator.reserveInputMask(0);
+        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.IndexAlreadyReserved.selector, 0, client2, client1));
+        coordinator.reserveMaskIndex(0);
     }
 
-    function test_currentlyAvailableInputMasks() public view {
-        // After buffer initialization, all indices should be available
-        uint256 available = coordinator.currentlyAvailableInputMasks();
-        assertEq(available, BUFFER_SIZE);
+    function test_reserveMaskIndex_revertsClientAlreadyReservedIndex() public {
+        vm.prank(client1);
+        coordinator.reserveMaskIndex(0);
+
+        vm.prank(client1);
+        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.ClientAlreadyReservedIndex.selector, client1, 0));
+        coordinator.reserveMaskIndex(1);
     }
 
-    // =========================================================================
-    // Input Submission Tests
-    // =========================================================================
-
-    function test_submitMaskedInput() public {
-        // Client reserves an index first
+    function test_submitMaskedInput_multipleClients() public {
         vm.prank(client1);
-        coordinator.reserveInputMask(0);
-
-        // Client submits masked input using reserved index
-        uint256 maskedInput = 12345;
-        vm.prank(client1);
-        vm.expectEmit(true, true, true, true);
-        emit MaskedInputEvent(client1, maskedInput, 0);
-        coordinator.submitMaskedInput(maskedInput, 0);
-    }
-
-    function test_cannotSubmitWithoutReservation() public {
-        // Client tries to submit without reserving - should fail
-        vm.prank(client1);
-        vm.expectRevert("This client did not reserve the input mask at this index");
-        coordinator.submitMaskedInput(12345, 0);
-    }
-
-    function test_cannotSubmitWithOthersReservation() public {
-        // Client1 reserves index 0
-        vm.prank(client1);
-        coordinator.reserveInputMask(0);
-
-        // Client2 tries to submit using client1's reservation - should fail
+        coordinator.reserveMaskIndex(0);
         vm.prank(client2);
-        vm.expectRevert("This client did not reserve the input mask at this index");
-        coordinator.submitMaskedInput(12345, 0);
-    }
+        coordinator.reserveMaskIndex(1);
+        vm.prank(client3);
+        coordinator.reserveMaskIndex(2);
 
-    function test_indexUnreservedAfterSubmission() public {
-        // Client reserves and submits
-        vm.startPrank(client1);
-        coordinator.reserveInputMask(0);
-        coordinator.submitMaskedInput(12345, 0);
-        vm.stopPrank();
-
-        // Index should be unreserved after submission, so client1 cannot submit again
         vm.prank(client1);
-        vm.expectRevert("This client did not reserve the input mask at this index");
-        coordinator.submitMaskedInput(67890, 0);
+        coordinator.submitMaskedInput(hex"2B67", 0);
+        vm.prank(client2);
+        coordinator.submitMaskedInput(hex"56CE", 1);
+        vm.prank(client3);
+        coordinator.submitMaskedInput(hex"8235", 2);
     }
 
-    // =========================================================================
-    // Client Authentication Tests
-    // =========================================================================
+    function test_submitMaskedInput_revertsWithoutReservation() public {
+        vm.prank(client1);
+        vm.expectRevert();
+        coordinator.submitMaskedInput(hex"3039", 0);
+    }
 
-    function test_authenticateClient() public {
-        // Create a signature for client1
-        uint256 requestIndex = 123;
-        bytes32 messageHash = keccak256(abi.encode(requestIndex));
-        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(messageHash);
+    function test_submitMaskedInput_revertsZeroMaskedInput() public {
+        vm.prank(client1);
+        coordinator.reserveMaskIndex(0);
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(client1PrivateKey, ethSignedMessageHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.prank(client1);
+        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.ZeroMaskedInput.selector, client1));
+        coordinator.submitMaskedInput(hex"", 0);
+    }
 
-        // Call authenticateClient as a party
+    function test_submitMaskedInput_revertsIndexNotReservedByCaller() public {
+        vm.prank(client1);
+        coordinator.reserveMaskIndex(0);
+        vm.prank(client2);
+        coordinator.reserveMaskIndex(1);
+
+        // client2 tries to submit using client1's index
+        vm.prank(client2);
+        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.IndexNotReserved.selector, client2, 0));
+        coordinator.submitMaskedInput(hex"3039", 0);
+    }
+
+    function test_submitMaskedInput_revertsAlreadySubmitted() public {
+        vm.prank(client1);
+        coordinator.reserveMaskIndex(0);
+
+        vm.prank(client1);
+        coordinator.submitMaskedInput(hex"3039", 0);
+
+        vm.prank(client1);
+        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.AlreadySubmittedInputs.selector, client1));
+        coordinator.submitMaskedInput(hex"7AB7", 0);
+    }
+
+    function test_baseNonceInitiallyZero() public view {
+        assertEq(coordinator.baseNonce(), 0);
+    }
+
+    function test_baseNonceIncreasesEachReset() public {
+        for (uint256 i = 0; i < 3; i++) {
+            coordinator.startPreprocessing();
+            coordinator.reserveInputMasks();
+            coordinator.collectInputs();
+            coordinator.startMpc();
+            coordinator.sendOutputs();
+            coordinator.finalize();
+            coordinator.resetCoordinator();
+        }
+        assertEq(coordinator.baseNonce(), N_INPUTS * 3);
+    }
+
+    function test_sendOutputShares_revertsIfNotOutputDistributionRound() public {
         vm.prank(party1);
-        bool isValid = coordinator.authenticateClient(requestIndex, client1, signature);
-        assertTrue(isValid);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                StoffelCoordinator.NotAtRound.selector,
+                StoffelCoordinator.Round.OutputDistribution,
+                StoffelCoordinator.Round.Idle
+            )
+        );
+        coordinator.sendOutputShares(client1, abi.encode("share"));
     }
 
-    function test_authenticateClient_invalidSignature() public {
-        uint256 requestIndex = 123;
-        bytes32 messageHash = keccak256(abi.encode(requestIndex));
-        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(messageHash);
+    function test_sendOutputShares_revertsIfNotParty() public {
+        vm.prank(client1);
+        vm.expectRevert();
+        coordinator.sendOutputShares(client1, abi.encode("share"));
+    }
 
-        // Sign with client2's key but claim it's client1
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(client2PrivateKey, ethSignedMessageHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
+    function test_sendOutputShares_revertsAlreadyReceivedOutputShares() public {
+        _advanceToOutputDistribution();
 
         vm.prank(party1);
-        bool isValid = coordinator.authenticateClient(requestIndex, client1, signature);
-        assertFalse(isValid);
-    }
+        coordinator.sendOutputShares(client1, abi.encode("share1"));
 
-    function test_authenticateClient_wrongRequestIndex() public {
-        uint256 requestIndex = 123;
-        bytes32 messageHash = keccak256(abi.encode(requestIndex));
-        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(messageHash);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(client1PrivateKey, ethSignedMessageHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        // Verify with different request index
         vm.prank(party1);
-        bool isValid = coordinator.authenticateClient(456, client1, signature);
-        assertFalse(isValid);
+        vm.expectRevert(
+            abi.encodeWithSelector(StoffelInputManager.AlreadyReceivedOutputShares.selector, client1, party1)
+        );
+        coordinator.sendOutputShares(client1, abi.encode("share1_dup"));
     }
 
-    function test_authenticateClient_onlyParty() public {
-        uint256 requestIndex = 123;
-        bytes32 messageHash = keccak256(abi.encode(requestIndex));
-        bytes32 ethSignedMessageHash = MessageHashUtils.toEthSignedMessageHash(messageHash);
+    function test_sendOutputShares_noEventBeforeThreshold() public {
+        // t=1, threshold=2t+1=3; two shares must not trigger EnoughOutputShares
+        _advanceToOutputDistribution();
+        vm.recordLogs();
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(client1PrivateKey, ethSignedMessageHash);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.prank(party1);
+        coordinator.sendOutputShares(client1, abi.encode("share1"));
+        vm.prank(party2);
+        coordinator.sendOutputShares(client1, abi.encode("share2"));
 
-        // Non-party caller should revert
-        vm.prank(unauthorized);
-        vm.expectRevert("Only a Stoffel party can call this function.");
-        coordinator.authenticateClient(requestIndex, client1, signature);
+        bytes32 eventSig = StoffelInputManager.EnoughOutputShares.selector;
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i = 0; i < logs.length; i++) {
+            assertTrue(logs[i].topics[0] != eventSig, "EnoughOutputShares emitted before threshold");
+        }
+    }
+
+    function test_sendOutputShares_emitsEnoughOutputSharesAtThreshold() public {
+        _advanceToOutputDistribution();
+
+        bytes memory share1 = abi.encode("share1");
+        bytes memory share2 = abi.encode("share2");
+        bytes memory share3 = abi.encode("share3");
+
+        vm.prank(party1);
+        coordinator.sendOutputShares(client1, share1);
+        vm.prank(party2);
+        coordinator.sendOutputShares(client1, share2);
+
+        bytes[] memory expectedShares = new bytes[](3);
+        expectedShares[0] = share1;
+        expectedShares[1] = share2;
+        expectedShares[2] = share3;
+
+        vm.expectEmit(true, false, false, true);
+        emit StoffelInputManager.EnoughOutputShares(client1, expectedShares);
+
+        vm.prank(party3);
+        coordinator.sendOutputShares(client1, share3);
+    }
+
+    function test_sendOutputShares_publicOutputAtAddressZero() public {
+        _advanceToOutputDistribution();
+
+        bytes memory share1 = abi.encode("pub1");
+        bytes memory share2 = abi.encode("pub2");
+        bytes memory share3 = abi.encode("pub3");
+
+        vm.prank(party1);
+        coordinator.sendOutputShares(address(0), share1);
+        vm.prank(party2);
+        coordinator.sendOutputShares(address(0), share2);
+
+        bytes[] memory expectedShares = new bytes[](3);
+        expectedShares[0] = share1;
+        expectedShares[1] = share2;
+        expectedShares[2] = share3;
+
+        vm.expectEmit(true, false, false, true);
+        emit StoffelInputManager.EnoughOutputShares(address(0), expectedShares);
+
+        vm.prank(party3);
+        coordinator.sendOutputShares(address(0), share3);
+    }
+
+    function test_sendOutputShares_revertsIfClientNotRegistered() public {
+        _advanceToOutputDistribution();
+
+        address unregistered = makeAddr("UNREGISTERED");
+
+        vm.prank(party1);
+        vm.expectRevert(abi.encodeWithSelector(StoffelInputManager.OutputClientNotRegistered.selector, unregistered));
+        coordinator.sendOutputShares(unregistered, abi.encode("share"));
+    }
+
+    function _advanceToOutputDistribution() internal {
+        coordinator.startPreprocessing();
+        coordinator.reserveInputMasks();
+        coordinator.collectInputs();
+        coordinator.startMpc();
+        coordinator.sendOutputs();
     }
 }
