@@ -32,7 +32,7 @@ contract StoffelInputManagerTest is Test {
         outClients[2] = client3;
         outClients[3] = address(0);
 
-        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, N_INPUTS, outClients);
+        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, N_INPUTS, outClients, 3);
     }
 
     function test_availableInputMasksInitial() public view {

@@ -10,8 +10,9 @@ contract FakeCoordinator is StoffelCoordinator {
         uint256 t,
         address[] memory initialMpcNodes,
         uint256 nInputs,
-        address[] memory outputClients
-    ) StoffelCoordinator(stoffelProgramHash, t, initialMpcNodes, nInputs, outputClients) {}
+        address[] memory outputClients,
+        uint256 reconstructionThreshold
+    ) StoffelCoordinator(stoffelProgramHash, t, initialMpcNodes, nInputs, outputClients, reconstructionThreshold) {}
 
     function startPreprocessing()
         external
