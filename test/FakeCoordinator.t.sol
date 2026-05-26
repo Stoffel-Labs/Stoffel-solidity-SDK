@@ -20,7 +20,7 @@ contract FakeCoordinatorTest is Test {
         nodes[2] = party2;
         nodes[3] = party3;
 
-        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, 3, new address[](0));
+        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, 3, new address[](0), 3);
     }
 
     // ── startPreprocessing ───────────────────────────────────────────────────

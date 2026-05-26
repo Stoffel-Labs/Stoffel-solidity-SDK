@@ -190,16 +190,18 @@ abstract contract StoffelCoordinator is StoffelAccessControl, StoffelInputManage
     /// @param t Fault tolerance threshold for the MPC computation
     /// @param initialMpcNodes Array of addresses for the initial MPC nodes
     /// @param nInputs Number of inputs expected from clients for the computation
+    /// @param _reconstructionThreshold Minimum number of output shares required for reconstruction
     /// @dev Sets up access control, stores program hash, and emits initialization event
     constructor(
         bytes32 _stoffelProgramHash,
         uint256 t,
         address[] memory initialMpcNodes,
         uint256 nInputs,
-        address[] memory outputClients
+        address[] memory outputClients,
+        uint256 _reconstructionThreshold
     )
         StoffelAccessControl(t, initialMpcNodes)
-        StoffelInputManager(nInputs, outputClients)
+        StoffelInputManager(nInputs, outputClients, _reconstructionThreshold)
         Ownable(msg.sender)
     {
         stoffelProgramHash = _stoffelProgramHash;

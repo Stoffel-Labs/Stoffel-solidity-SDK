@@ -27,10 +27,10 @@ contract StoffelAccessControl is AccessControl, AccessControlEnumerable, IStoffe
 
     /// @notice Fault tolerance threshold
     /// @dev Number of faulty/malicious parties the system can tolerate
-    uint256 internal t;
+    uint256 internal immutable t;
 
     /// @notice n value
-    uint256 internal n;
+    uint256 internal immutable n;
 
     /// @notice Emitted when the access control is initialized
     /// @param nParties Initial number of parties

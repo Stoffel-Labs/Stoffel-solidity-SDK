@@ -30,11 +30,11 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         mapping(address => bool) sharesReceived;
     }
 
-    /// @notice Addresses of clients that may receive output shares
-    address[] internal outputClients;
-
     /// @notice Private encrypted output shares for specific clients and public unencrypted output shares at `address(0)`.
     mapping(address => Output) internal outputs;
+
+    /// @notice Minimum number of output shares required for client-side reconstruction
+    uint256 internal immutable reconstructionThreshold;
 
     /// @notice Mapping from input mask index to the client who reserved it
     /// @dev Address(0) indicates the index is available for reservation
@@ -120,7 +120,9 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @notice Initializes the input manager with the number of input slots and the set of output clients
     /// @param nIndicesToReserve Total number of input mask indices clients may reserve
     /// @param initialOutputClients Addresses that are allowed to receive output shares; include address(0) for public output
-    constructor(uint256 nIndicesToReserve, address[] memory initialOutputClients) {
+    /// @param _reconstructionThreshold Minimum number of shares required for output reconstruction
+    constructor(uint256 nIndicesToReserve, address[] memory initialOutputClients, uint256 _reconstructionThreshold) {
+        reconstructionThreshold = _reconstructionThreshold;
         baseNonce = 0;
         nTotalIndices = nIndicesToReserve;
         nReservedIndices = 0;
@@ -130,7 +132,6 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
             _grantRole(OUTPUT_CLIENT_ROLE, initialOutputClients[i]);
             outputs[initialOutputClients[i]].shares = new bytes[](n);
         }
-        outputClients = initialOutputClients;
 
         emit IndexBufferEvent(nTotalIndices, msg.sender);
     }
@@ -215,7 +216,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
     /// @notice Stores output shares sent by an MPC party for a given client
     /// @param client The client the shares are intended for; use `address(0)` for public (unencrypted) outputs
     /// @param shares The output shares — encrypted under the client's key for private outputs, plaintext for public
-    /// @dev Emits EnoughOutputShares once the reconstruction threshold (2t+1) is reached.
+    /// @dev Emits EnoughOutputShares once the reconstruction threshold is reached.
     ///      New output clients are registered on first share receipt; the total is capped at maxOutputs
     ///      to prevent a malicious party from exhausting storage by submitting shares for arbitrary addresses.
     ///      Decryption and secret reconstruction are performed client-side.
@@ -232,7 +233,7 @@ abstract contract StoffelInputManager is StoffelAccessControl, IStoffelInputMana
         output.shares[output.nShares] = shares;
         output.nShares += 1;
 
-        if (output.nShares >= 2 * t + 1) {
+        if (output.nShares >= reconstructionThreshold) {
             bytes[] memory sentShares = new bytes[](output.nShares);
             for (uint256 i = 0; i < output.nShares; i++) {
                 sentShares[i] = output.shares[i];

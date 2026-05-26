@@ -30,7 +30,7 @@ contract StoffelCoordinatorTest is Test {
         outClients[0] = client1;
         outClients[1] = client2;
 
-        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, 3, outClients);
+        coordinator = new FakeCoordinator(keccak256("program hash"), 1, nodes, 3, outClients, 3);
     }
 
     function test_initialRoundIsIdle() public view {
